@@ -54,6 +54,21 @@ jobs:
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8787/api/health && exit 0; sleep 1; done
           cat mock-server.log; exit 1
 
+      - name: Smoke launch
+        run: |
+          mkdir -p screenshots
+          (xcrun simctl launch --console-pty "$UDID" io.github.giulio177.musicseerr > screenshots/console.log 2>&1 &)
+          sleep 25
+          xcrun simctl io "$UDID" screenshot screenshots/00-smoke.png
+          xcrun simctl spawn "$UDID" launchctl list | grep -i musicseerr || echo "APP NOT RUNNING"
+          echo "--- console"; tail -n 80 screenshots/console.log
+          echo "--- crash reports"
+          ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i musicseerr | head -3 | while read f; do
+            cp ~/Library/Logs/DiagnosticReports/"$f" screenshots/
+            head -c 6000 ~/Library/Logs/DiagnosticReports/"$f"
+          done
+          xcrun simctl terminate "$UDID" io.github.giulio177.musicseerr || true
+
       - name: Install Maestro
         run: |
           curl -fsSL "https://get.maestro.mobile.dev" | bash
@@ -68,7 +83,7 @@ jobs:
           mkdir -p screenshots
           xcrun simctl io "$UDID" screenshot screenshots/zz-failure.png
           xcrun simctl spawn "$UDID" log show --last 15m --style compact \
-            --predicate 'process == "MusicSeerr"' > screenshots/app.log || true
+            --predicate 'process == "MusicSeerr" OR subsystem == "com.facebook.react.log"' > screenshots/app.log || true
           tail -n 150 screenshots/app.log
 
       - uses: actions/upload-artifact@v4
