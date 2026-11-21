@@ -16,8 +16,21 @@ export default function RootLayout() {
   const status = useAuth((s) => s.status);
 
   useEffect(() => {
-    useOffline.getState().refresh();
-    useAuth.getState().load();
+    try {
+      useOffline.getState().refresh();
+    } catch (error) {
+      console.error('[startup] offline library', error);
+    }
+    useAuth
+      .getState()
+      .load()
+      .catch((error) => {
+        console.error('[startup] session', error);
+        useAuth.setState({ status: 'signedOut' });
+      });
+    // Never leave the splash screen up, whatever happens during startup.
+    const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), 5000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

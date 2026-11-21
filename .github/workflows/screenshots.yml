@@ -64,7 +64,12 @@ jobs:
 
       - name: Final screen on failure
         if: failure()
-        run: mkdir -p screenshots && xcrun simctl io "$UDID" screenshot screenshots/zz-failure.png
+        run: |
+          mkdir -p screenshots
+          xcrun simctl io "$UDID" screenshot screenshots/zz-failure.png
+          xcrun simctl spawn "$UDID" log show --last 15m --style compact \
+            --predicate 'process == "MusicSeerr"' > screenshots/app.log || true
+          tail -n 150 screenshots/app.log
 
       - uses: actions/upload-artifact@v4
         if: always()
