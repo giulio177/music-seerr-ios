@@ -261,4 +261,4 @@ createServer(async (req, res) => {
   if (path.startsWith('/api/history/plays/')) return json(res, 200, { listened_seconds: 0, duration: 0 });
   if (path === '/api/auth/logout') return json(res, 200, { success: true });
   return json(res, 404, { detail: 'Not found' });
-}).listen(port, () => console.log(`Mock Music Seerr server on http://localhost:${port}`));
+}).listen(port, '0.0.0.0', () => console.log(`Mock Music Seerr server on http://0.0.0.0:${port}`));

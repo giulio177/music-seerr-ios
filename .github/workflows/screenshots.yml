@@ -51,8 +51,8 @@ jobs:
       - name: Start the mock server
         run: |
           nohup node scripts/mock-server.mjs 8787 > mock-server.log 2>&1 &
-          sleep 2
-          curl -fsS http://127.0.0.1:8787/api/health
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8787/api/health && exit 0; sleep 1; done
+          cat mock-server.log; exit 1
 
       - name: Install Maestro
         run: |
