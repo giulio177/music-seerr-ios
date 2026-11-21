@@ -1,0 +1,112 @@
+{
+  "common": {
+    "retry": "Riprova",
+    "cancel": "Annulla",
+    "play": "Riproduci",
+    "shuffle": "Casuale",
+    "tracks_one": "{{count}} brano",
+    "tracks_other": "{{count}} brani",
+    "unknownError": "Qualcosa è andato storto."
+  },
+  "tabs": {
+    "library": "Libreria",
+    "search": "Cerca",
+    "offline": "Scaricati",
+    "settings": "Impostazioni"
+  },
+  "login": {
+    "subtitle": "Accedi al tuo server Music Seerr",
+    "server": "Indirizzo del server",
+    "serverPlaceholder": "192.168.1.10:8000",
+    "username": "Nome utente Jellyfin",
+    "password": "Password",
+    "signIn": "Accedi",
+    "guest": "Continua come ospite",
+    "errorServer": "Inserisci l'indirizzo del server.",
+    "errorUnreachable": "Il server non è raggiungibile. Controlla l'indirizzo e che l'iPhone sia sulla stessa rete.",
+    "errorCredentials": "Nome utente o password errati.",
+    "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Music Seerr sul server."
+  },
+  "library": {
+    "playlists": "Playlist",
+    "albums": "Album",
+    "artists": "Artisti",
+    "filter": "Filtra",
+    "empty": "Ancora niente qui.",
+    "guestTitle": "Libreria non disponibile per gli ospiti",
+    "guestBody": "Accedi con un account Jellyfin per sfogliare la libreria. Come ospite puoi cercare e richiedere brani."
+  },
+  "detail": {
+    "downloadAll": "Scarica",
+    "downloaded": "Scaricato",
+    "downloading": "Download {{done}}/{{total}}"
+  },
+  "track": {
+    "playNext": "Riproduci dopo",
+    "addToQueue": "Aggiungi alla coda",
+    "download": "Scarica sull'iPhone",
+    "removeDownload": "Rimuovi download",
+    "goToAlbum": "Vai all'album",
+    "goToArtist": "Vai all'artista",
+    "addedToQueue": "Aggiunto alla coda",
+    "playingNext": "Riprodotto dopo"
+  },
+  "search": {
+    "placeholder": "Brani, artisti, album",
+    "inLibrary": "Nella tua libreria",
+    "catalog": "Catalogo",
+    "hint": "Cerca nel catalogo e richiedi brani per la tua libreria.",
+    "noResults": "Nessun risultato.",
+    "request": "Richiedi",
+    "requested": "Richiesto",
+    "inLibraryBadge": "In libreria",
+    "preview": "Anteprima",
+    "status": {
+      "pending": "In coda",
+      "downloading": "Download",
+      "tagging": "Tag",
+      "moving": "Salvataggio",
+      "jellyfin_sync": "Aggiunta alla libreria",
+      "completed": "In libreria",
+      "failed": "Non riuscito",
+      "interrupted": "Interrotto"
+    },
+    "requestFailed": "La richiesta non è riuscita."
+  },
+  "offline": {
+    "title": "Scaricati",
+    "empty": "I brani scaricati si ascoltano anche senza server. Usa il pulsante di download su un album, una playlist o un brano.",
+    "playAll": "Riproduci tutto",
+    "size": "{{size}} su questo iPhone"
+  },
+  "player": {
+    "nothing": "Nessuna riproduzione",
+    "lyrics": "Testo",
+    "queue": "In coda",
+    "noLyrics": "Nessun testo per questo brano.",
+    "preview": "Anteprima",
+    "repeat": "Ripeti",
+    "shuffle": "Casuale",
+    "queueEmpty": "Niente in coda dopo questo brano."
+  },
+  "settings": {
+    "account": "Account",
+    "server": "Server",
+    "role": "Ruolo",
+    "admin": "Amministratore",
+    "user": "Utente",
+    "guest": "Ospite",
+    "storage": "Download",
+    "storageUsed": "Spazio occupato",
+    "removeAll": "Rimuovi tutti i download",
+    "removeAllConfirm": "Rimuovere tutti i brani scaricati da questo iPhone?",
+    "signOut": "Esci",
+    "version": "Versione",
+    "offlineBanner": "Server non raggiungibile. I brani scaricati funzionano comunque."
+  },
+  "errors": {
+    "offlineTitle": "Server non raggiungibile",
+    "offlineBody": "Puoi comunque ascoltare i brani scaricati.",
+    "openDownloads": "Apri i download"
+  }
+}

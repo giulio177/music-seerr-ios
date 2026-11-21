@@ -1,0 +1,112 @@
+{
+  "common": {
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "play": "Play",
+    "shuffle": "Shuffle",
+    "tracks_one": "{{count}} track",
+    "tracks_other": "{{count}} tracks",
+    "unknownError": "Something went wrong."
+  },
+  "tabs": {
+    "library": "Library",
+    "search": "Search",
+    "offline": "Downloads",
+    "settings": "Settings"
+  },
+  "login": {
+    "subtitle": "Sign in to your Music Seerr server",
+    "server": "Server address",
+    "serverPlaceholder": "192.168.1.10:8000",
+    "username": "Jellyfin username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "guest": "Continue as guest",
+    "errorServer": "Enter the server address.",
+    "errorUnreachable": "The server cannot be reached. Check the address and that this iPhone is on the same network.",
+    "errorCredentials": "Wrong username or password.",
+    "errorServerTooOld": "This server is too old for the app. Update Music Seerr on the server."
+  },
+  "library": {
+    "playlists": "Playlists",
+    "albums": "Albums",
+    "artists": "Artists",
+    "filter": "Filter",
+    "empty": "Nothing here yet.",
+    "guestTitle": "Library unavailable for guests",
+    "guestBody": "Sign in with a Jellyfin account to browse the library. As a guest you can search and request songs."
+  },
+  "detail": {
+    "downloadAll": "Download",
+    "downloaded": "Downloaded",
+    "downloading": "Downloading {{done}}/{{total}}"
+  },
+  "track": {
+    "playNext": "Play next",
+    "addToQueue": "Add to queue",
+    "download": "Download to iPhone",
+    "removeDownload": "Remove download",
+    "goToAlbum": "Go to album",
+    "goToArtist": "Go to artist",
+    "addedToQueue": "Added to the queue",
+    "playingNext": "Plays next"
+  },
+  "search": {
+    "placeholder": "Songs, artists, albums",
+    "inLibrary": "In your library",
+    "catalog": "Catalog",
+    "hint": "Search the catalog and request songs for your library.",
+    "noResults": "No results.",
+    "request": "Request",
+    "requested": "Requested",
+    "inLibraryBadge": "In library",
+    "preview": "Preview",
+    "status": {
+      "pending": "Queued",
+      "downloading": "Downloading",
+      "tagging": "Tagging",
+      "moving": "Saving",
+      "jellyfin_sync": "Adding to library",
+      "completed": "In library",
+      "failed": "Failed",
+      "interrupted": "Interrupted"
+    },
+    "requestFailed": "The request failed."
+  },
+  "offline": {
+    "title": "Downloads",
+    "empty": "Downloaded songs play without the server. Use the download button on an album, playlist, or song.",
+    "playAll": "Play all",
+    "size": "{{size}} on this iPhone"
+  },
+  "player": {
+    "nothing": "Nothing playing",
+    "lyrics": "Lyrics",
+    "queue": "Up next",
+    "noLyrics": "No lyrics for this song.",
+    "preview": "Preview",
+    "repeat": "Repeat",
+    "shuffle": "Shuffle",
+    "queueEmpty": "Nothing queued after this song."
+  },
+  "settings": {
+    "account": "Account",
+    "server": "Server",
+    "role": "Role",
+    "admin": "Administrator",
+    "user": "User",
+    "guest": "Guest",
+    "storage": "Downloads",
+    "storageUsed": "Space used",
+    "removeAll": "Remove all downloads",
+    "removeAllConfirm": "Remove every downloaded song from this iPhone?",
+    "signOut": "Sign out",
+    "version": "Version",
+    "offlineBanner": "Server unreachable. Downloaded songs still play."
+  },
+  "errors": {
+    "offlineTitle": "Server unreachable",
+    "offlineBody": "You can still play your downloaded songs.",
+    "openDownloads": "Open downloads"
+  }
+}

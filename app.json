@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Music Seerr",
+    "slug": "music-seerr-ios",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "musicseerr",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#09090d",
+    "ios": {
+      "bundleIdentifier": "io.github.giulio177.musicseerr",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "Music Seerr connects to your Music Seerr server on your home network.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#09090d"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
