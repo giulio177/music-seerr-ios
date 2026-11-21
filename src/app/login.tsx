@@ -25,7 +25,7 @@ export default function Login() {
       if (e.detail === 'server_too_old') return t('login.errorServerTooOld');
       return e.detail;
     }
-    return t('common.unknownError');
+    return e instanceof Error && e.message ? `${t('common.unknownError')} (${e.message})` : t('common.unknownError');
   };
 
   const submit = async (mode: 'login' | 'guest') => {

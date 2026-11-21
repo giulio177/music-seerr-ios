@@ -24,10 +24,15 @@ type AuthState = {
 
 type LoginResponse = { success: boolean; user: User; session_token?: string };
 
+/** Saves the session in the keychain; a keychain failure keeps the session for this launch only. */
 async function persist(server: string, token: string, user: User) {
-  await SecureStore.setItemAsync(KEYS.server, server);
-  await SecureStore.setItemAsync(KEYS.token, token);
-  await SecureStore.setItemAsync(KEYS.user, JSON.stringify(user));
+  try {
+    await SecureStore.setItemAsync(KEYS.server, server);
+    await SecureStore.setItemAsync(KEYS.token, token);
+    await SecureStore.setItemAsync(KEYS.user, JSON.stringify(user));
+  } catch (error) {
+    console.warn('[auth] could not save the session to the keychain', error);
+  }
 }
 
 async function loadAccent() {
@@ -47,11 +52,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   unreachable: false,
 
   load: async () => {
-    const [serverUrl, token, userJson] = await Promise.all([
-      SecureStore.getItemAsync(KEYS.server),
-      SecureStore.getItemAsync(KEYS.token),
-      SecureStore.getItemAsync(KEYS.user),
-    ]);
+    const read = (key: string) => SecureStore.getItemAsync(key).catch(() => null);
+    const [serverUrl, token, userJson] = await Promise.all([read(KEYS.server), read(KEYS.token), read(KEYS.user)]);
     if (!serverUrl || !token) {
       set({ status: 'signedOut', serverUrl: serverUrl ?? '' });
       return;
@@ -76,7 +78,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         return;
       }
       set({ user: session.user, unreachable: false });
-      await SecureStore.setItemAsync(KEYS.user, JSON.stringify(session.user));
+      await SecureStore.setItemAsync(KEYS.user, JSON.stringify(session.user)).catch(() => undefined);
       if (!session.user.is_guest) loadAccent();
     } catch (error) {
       if (error instanceof ApiError && error.offline) set({ unreachable: true });
@@ -115,8 +117,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   expire: () => {
-    SecureStore.deleteItemAsync(KEYS.token);
-    SecureStore.deleteItemAsync(KEYS.user);
+    SecureStore.deleteItemAsync(KEYS.token).catch(() => undefined);
+    SecureStore.deleteItemAsync(KEYS.user).catch(() => undefined);
     set({ status: 'signedOut', token: null, user: null, unreachable: false });
   },
 }));
