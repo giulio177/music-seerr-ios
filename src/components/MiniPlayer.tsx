@@ -16,7 +16,7 @@ export function MiniPlayer() {
   const { accent } = useAccent();
 
   return (
-    <Pressable style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
+    <Pressable testID="mini-player" style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
       <Cover path={item?.coverLocal ? null : item?.cover} local={item?.coverLocal} size={36} />
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.title}>

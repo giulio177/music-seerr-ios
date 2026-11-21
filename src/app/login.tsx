@@ -60,6 +60,7 @@ export default function Login() {
               <Field label={t('login.server')}>
                 <TextInput
                   value={server}
+                  testID="login-server"
                   onChangeText={setServer}
                   placeholder={t('login.serverPlaceholder')}
                   placeholderTextColor={colors.textTertiary}
@@ -73,6 +74,7 @@ export default function Login() {
               <Field label={t('login.username')}>
                 <TextInput
                   value={username}
+                  testID="login-username"
                   onChangeText={setUsername}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -84,6 +86,7 @@ export default function Login() {
               <Field label={t('login.password')}>
                 <TextInput
                   value={password}
+                  testID="login-password"
                   onChangeText={setPassword}
                   secureTextEntry
                   textContentType="password"
@@ -93,7 +96,7 @@ export default function Login() {
                 />
               </Field>
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              <AccentButton label={t('login.signIn')} onPress={() => submit('login')} loading={busy === 'login'} disabled={!!busy} />
+              <AccentButton testID="login-submit" label={t('login.signIn')} onPress={() => submit('login')} loading={busy === 'login'} disabled={!!busy} />
               <AccentButton
                 label={t('login.guest')}
                 variant="glass"

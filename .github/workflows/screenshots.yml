@@ -1,0 +1,76 @@
+name: Screenshots
+
+# Runs the app in the iOS Simulator against the mock server and captures every screen with Maestro.
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate the iOS project
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace ios/MusicSeerr.xcworkspace \
+            -scheme MusicSeerr \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO \
+            build | tail -n 40
+
+      - name: Boot an Italian iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | test("^iPhone [0-9]+ Pro$"))] | last | .udid')
+          [ "$UDID" = null ] && UDID=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))] | last | .udid')
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLanguages -array it-IT
+          xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLocale -string it_IT
+          xcrun simctl shutdown "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
+          xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/MusicSeerr.app
+
+      - name: Start the mock server
+        run: |
+          nohup node scripts/mock-server.mjs 8787 > mock-server.log 2>&1 &
+          sleep 2
+          curl -fsS http://127.0.0.1:8787/api/health
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Capture screens
+        run: maestro --device "$UDID" test .maestro/screenshots.yaml
+
+      - name: Final screen on failure
+        if: failure()
+        run: mkdir -p screenshots && xcrun simctl io "$UDID" screenshot screenshots/zz-failure.png
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: |
+            screenshots/
+            mock-server.log
+            ~/.maestro/tests/

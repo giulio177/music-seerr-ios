@@ -236,6 +236,7 @@ function PanelToggle({ icon, active, label, onPress }: { icon: keyof typeof Ioni
   const { accent } = useAccent();
   return (
     <Pressable
+      testID={`player-${icon}`}
       onPress={onPress}
       hitSlop={10}
       accessibilityLabel={label}

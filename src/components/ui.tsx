@@ -49,6 +49,7 @@ export function AccentButton({
   loading,
   variant = 'solid',
   style,
+  testID,
 }: {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -57,6 +58,7 @@ export function AccentButton({
   loading?: boolean;
   variant?: 'solid' | 'glass';
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const { accent, accent2 } = useAccent();
   const content = (
@@ -73,6 +75,7 @@ export function AccentButton({
   );
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [styles.button, { opacity: disabled ? 0.5 : pressed ? 0.8 : 1 }, style]}
