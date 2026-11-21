@@ -19,9 +19,10 @@ appId: io.github.giulio177.musicseerr
 - tapOn:
     id: login-password
 - inputText: password
-- hideKeyboard
+- pressKey: Enter
 - tapOn:
     id: login-submit
+    optional: true
 - extendedWaitUntil:
     visible: Late Night Drive
     timeout: 30000
@@ -92,7 +93,9 @@ appId: io.github.giulio177.musicseerr
     visible: Catalogo
     timeout: 15000
     optional: true
-- hideKeyboard
+- tapOn:
+    text: Catalogo
+    optional: true
 - waitForAnimationToEnd
 - takeScreenshot: screenshots/09-search
 - tapOn:
