@@ -1,7 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
 import { create } from 'zustand';
-import { absoluteUrl, api, authHeaders } from './api';
+import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
 import type { LibraryTrack, Lyrics } from './types';
 
 /**
@@ -176,6 +176,49 @@ export function localCoverUri(track: OfflineTrack) {
   return track.cover_file ? new File(coverDir, track.cover_file).uri : null;
 }
 
+/**
+ * Saves the first artwork that loads (song image, then album image) to `dest`. Uses `fetch` because the
+ * file download API dropped the Authorization header for images (the server answered 401).
+ * Returns false when none exists or the server is unreachable.
+ */
+export async function saveArtwork(paths: (string | null | undefined)[], dest: File): Promise<boolean> {
+  for (const path of paths) {
+    if (!path) continue;
+    try {
+      const res = await fetch(absoluteUrl(path), { headers: authHeaders(), credentials: 'omit' });
+      if (!res.ok) continue;
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (!bytes.length) continue;
+      if (dest.exists) dest.delete();
+      dest.write(bytes);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** Fetches missing covers of downloaded songs (earlier versions saved none when the song had no own image). */
+let backfilling = false;
+export async function backfillCovers() {
+  if (backfilling) return;
+  backfilling = true;
+  try {
+    ensureDirs();
+    for (const track of Object.values(useOffline.getState().tracks)) {
+      if (track.cover_file && new File(coverDir, track.cover_file).exists) continue;
+      const name = `${track.id}.jpg`;
+      const ok = await saveArtwork([`/api/jellyfin/image/${track.id}`, albumCoverPath(track.album_id)], new File(coverDir, name));
+      if (!ok) continue;
+      database().runSync('UPDATE tracks SET cover_file = ? WHERE id = ?', name, track.id);
+      useOffline.setState((s) => (s.tracks[track.id] ? { tracks: { ...s.tracks, [track.id]: { ...s.tracks[track.id], cover_file: name } } } : s));
+    }
+  } finally {
+    backfilling = false;
+  }
+}
+
 type DownloadState = 'queued' | number | 'error';
 
 type OfflineState = {
@@ -220,14 +263,9 @@ async function downloadOne(track: LibraryTrack, onProgress: (p: number) => void)
   if (!audio.parentDirectory.exists) audio.parentDirectory.create({ intermediates: true });
   partial.move(audio);
 
-  let coverName: string | null = `${track.id}.jpg`;
-  try {
-    const cover = new File(coverDir, coverName);
-    if (cover.exists) cover.delete();
-    await File.downloadFileAsync(absoluteUrl(track.cover_url), cover, { headers: authHeaders() });
-  } catch {
-    coverName = null;
-  }
+  const coverName = (await saveArtwork([track.cover_url, albumCoverPath(track.album_id)], new File(coverDir, `${track.id}.jpg`)))
+    ? `${track.id}.jpg`
+    : null;
 
   const lyrics = await fetchLyrics(track);
   const row: OfflineTrack = {

@@ -17,7 +17,7 @@ export function MiniPlayer() {
 
   return (
     <Pressable testID="mini-player" style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
-      <Cover path={item?.coverLocal ? null : item?.cover} local={item?.coverLocal} size={36} />
+      <Cover path={item?.cover} local={item?.coverLocal} fallback={item?.coverFallback} size={36} />
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.title}>
           {item?.title ?? t('player.nothing')}

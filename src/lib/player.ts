@@ -1,8 +1,8 @@
 import { createAudioPlaylist, setAudioModeAsync, type AudioPlaylist, type AudioSource } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import { create } from 'zustand';
-import { absoluteUrl, api, authHeaders } from './api';
-import { localAudioUri, localCoverUri, streamPath, useOffline } from './offline';
+import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
+import { localAudioUri, localCoverUri, saveArtwork, streamPath, useOffline } from './offline';
 import type { CatalogTrack, LibraryTrack } from './types';
 
 export type QueueItem = {
@@ -17,6 +17,8 @@ export type QueueItem = {
   duration: number;
   /** Absolute artwork URL (needs auth headers when it points at the server). */
   cover: string | null;
+  /** Album artwork path, for songs without an image of their own. */
+  coverFallback?: string | null;
   /** Local artwork file for downloaded tracks. */
   coverLocal: string | null;
   kind: 'library' | 'preview';
@@ -72,6 +74,7 @@ function fromLibrary(track: LibraryTrack, order: number): QueueItem {
     artistId: track.artist_id,
     duration: track.duration_sec,
     cover: absoluteUrl(track.cover_url),
+    coverFallback: albumCoverPath(track.album_id),
     coverLocal: offline ? localCoverUri(offline) : null,
     kind: 'library',
     library: track,
@@ -127,7 +130,6 @@ const noArtwork = new Set<string>();
 
 /**
  * The lock screen loads artwork without auth headers, so server covers are cached to disk first.
- * Fetched with `fetch` (the file download API dropped the Authorization header, which the server answered with 401).
  */
 async function artworkFor(item: QueueItem): Promise<string | undefined> {
   if (item.coverLocal) return item.coverLocal;
@@ -136,13 +138,9 @@ async function artworkFor(item: QueueItem): Promise<string | undefined> {
   try {
     if (!artDir.exists) artDir.create({ intermediates: true });
     const file = new File(artDir, `${item.id}.jpg`);
-    if (!file.exists) {
-      const res = await fetch(item.cover, { headers: authHeaders(), credentials: 'omit' });
-      if (!res.ok) {
-        if (res.status === 404) noArtwork.add(item.id);
-        return undefined;
-      }
-      file.write(new Uint8Array(await res.arrayBuffer()));
+    if (!file.exists && !(await saveArtwork([item.cover, item.coverFallback], file))) {
+      noArtwork.add(item.id);
+      return undefined;
     }
     return file.uri;
   } catch {
@@ -392,6 +390,18 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ queue: [], index: 0, playing: false, position: 0, duration: 0 });
   },
 }));
+
+// A song that finishes downloading while it waits in the queue switches to the local file, so it never streams.
+useOffline.subscribe((state, prev) => {
+  if (!playlist || state.tracks === prev.tracks) return;
+  const { queue, index } = usePlayer.getState();
+  for (let i = index + 1; i < queue.length; i++) {
+    const item = queue[i];
+    if (item.kind !== 'library' || !state.tracks[item.id] || prev.tracks[item.id]) continue;
+    playlist.remove(i);
+    playlist.insert(sourceFor(item), i);
+  }
+});
 
 export function useCurrentItem() {
   return usePlayer((s) => s.queue[s.index]);

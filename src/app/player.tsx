@@ -74,7 +74,7 @@ function CoverPanel({ item }: { item: QueueItem }) {
   return (
     <View style={styles.coverWrap}>
       <View style={{ transform: [{ scale: playing ? 1 : 0.86 }] }}>
-        <Cover path={item.coverLocal ? null : item.cover} local={item.coverLocal} size={size} shadow />
+        <Cover path={item.cover} local={item.coverLocal} fallback={item.coverFallback} size={size} shadow />
       </View>
     </View>
   );
@@ -154,7 +154,7 @@ function QueuePanel() {
       ListEmptyComponent={<Text style={styles.noLyrics}>{t('player.queueEmpty')}</Text>}
       renderItem={({ item: q, index: i }) => (
         <Pressable onPress={() => usePlayer.getState().skipTo(index + 1 + i)} style={styles.queueRow}>
-          <Cover path={q.coverLocal ? null : q.cover} local={q.coverLocal} size={42} />
+          <Cover path={q.cover} local={q.coverLocal} fallback={q.coverFallback} size={42} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text numberOfLines={1} style={styles.queueSong}>{q.title}</Text>
             <Text numberOfLines={1} style={styles.queueArtist}>{q.artist}</Text>

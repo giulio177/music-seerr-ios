@@ -35,6 +35,18 @@ export function absoluteUrl(path: string, server = currentSession().serverUrl) {
   return `${server}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
+/** Backend path of a URL on the current server (`/api/...`), or null for other hosts. */
+export function serverPath(url: string) {
+  if (url.startsWith('/')) return url;
+  const server = currentSession().serverUrl;
+  return server && url.startsWith(`${server}/`) ? url.slice(server.length) : null;
+}
+
+/** Album artwork, used when a song has no image of its own (Jellyfin keeps most artwork on the album). */
+export function albumCoverPath(albumId?: string | null) {
+  return albumId ? `/api/jellyfin/image/${albumId}` : null;
+}
+
 export function authHeaders(token = currentSession().token): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

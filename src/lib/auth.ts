@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { api, ApiError, bindSession, normalizeServerUrl } from './api';
+import { backfillCovers } from './offline';
 import { useAccent } from './theme';
 import type { User } from './types';
 
@@ -84,7 +85,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       }
       set({ user: session.user, unreachable: false });
       await SecureStore.setItemAsync(KEYS.user, JSON.stringify(session.user)).catch(() => undefined);
-      if (!session.user.is_guest) loadAccent();
+      if (!session.user.is_guest) {
+        loadAccent();
+        backfillCovers();
+      }
     } catch (error) {
       if (error instanceof ApiError && error.offline) set({ unreachable: true });
     }

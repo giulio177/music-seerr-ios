@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActionSheetIOS, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from '@/lib/format';
+import { albumCoverPath } from '@/lib/api';
 import { localCoverUri, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
@@ -82,7 +83,7 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: P
       {showNumber ? (
         <Text style={[styles.number, current && { color: accent }]}>{track.index_number ?? '·'}</Text>
       ) : (
-        <Cover path={track.cover_url} local={offline ? localCoverUri(offline) : null} size={48} />
+        <Cover path={track.cover_url} local={offline ? localCoverUri(offline) : null} fallback={albumCoverPath(track.album_id)} size={48} />
       )}
       <View style={styles.meta}>
         <Text numberOfLines={1} style={[styles.title, current && { color: accent }]}>
