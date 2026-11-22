@@ -9,6 +9,7 @@
     "unknownError": "Something went wrong."
   },
   "tabs": {
+    "home": "Home",
     "library": "Library",
     "search": "Search",
     "offline": "Downloads",
@@ -27,6 +28,12 @@
     "errorCredentials": "Wrong username or password.",
     "errorServerTooOld": "This server is too old for the app. Update Music Seerr on the server.",
     "downloadsOnly": "Play downloads only"
+  },
+  "home": {
+    "recent": "Recently played",
+    "playlists": "Your playlists",
+    "picks": "Picked for you",
+    "empty": "Play something and it will show up here."
   },
   "library": {
     "playlists": "Playlists",

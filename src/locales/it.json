@@ -9,6 +9,7 @@
     "unknownError": "Qualcosa è andato storto."
   },
   "tabs": {
+    "home": "Home",
     "library": "Libreria",
     "search": "Cerca",
     "offline": "Scaricati",
@@ -27,6 +28,12 @@
     "errorCredentials": "Nome utente o password errati.",
     "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Music Seerr sul server.",
     "downloadsOnly": "Ascolta solo i download"
+  },
+  "home": {
+    "recent": "Ascoltati di recente",
+    "playlists": "Le tue playlist",
+    "picks": "Scelti per te",
+    "empty": "Ascolta qualcosa e comparirà qui."
   },
   "library": {
     "playlists": "Playlist",

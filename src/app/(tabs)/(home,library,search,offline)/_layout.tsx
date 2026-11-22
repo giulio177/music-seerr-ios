@@ -1,9 +1,10 @@
 import { Stack } from 'expo-router';
 import { colors } from '@/lib/theme';
 
-// Library, Search, and Downloads each get their own stack; album, artist, and playlist pages are shared.
+// Home, Library, Search, and Downloads each get their own stack; album, artist, and playlist pages are shared.
 export const unstable_settings = {
   anchor: 'index',
+  home: { anchor: 'home' },
   search: { anchor: 'search' },
   offline: { anchor: 'offline' },
 };

@@ -36,10 +36,15 @@ function audioFile(relative: string) {
   return new File(musicDir, ...relative.split('/'));
 }
 
-/** File name part safe for the Files app: no path separators or reserved characters. */
+/**
+ * File name part safe for the Files app and for file URLs: letters, digits, spaces, and a few punctuation
+ * marks. Brackets become parentheses (`[Radio Version]`); characters a URL path cannot hold become `_`.
+ */
 function safeName(value: string | null | undefined, fallback: string) {
   const cleaned = (value ?? '')
-    .replace(/[\\/:*?"<>|#%\u0000-\u001f]/g, '_')
+    .replace(/[[{]/g, '(')
+    .replace(/[\]}]/g, ')')
+    .replace(/[^\p{L}\p{N}\p{M} _\-.,'()&+!]/gu, '_')
     .replace(/^[.\s]+|[.\s]+$/g, '')
     .slice(0, 80)
     .trim();
@@ -68,42 +73,66 @@ function pruneEmptyFolders(relative: string) {
   }
 }
 
-function supportPath() {
-  return decodeURIComponent(supportDir.uri.replace(/^file:\/\//, ''));
+function pathOf(dir: Directory) {
+  return decodeURIComponent(dir.uri.replace(/^file:\/\//, ''));
 }
 
-/** One-time move from the first layout (Documents/music/<id>.<ext>, Documents/covers, Documents/SQLite). */
+/**
+ * Moves the first layout (Documents/music/<id>.<ext>, Documents/covers, Documents/SQLite) into the current one.
+ * Idempotent and synchronous (`moveSync`): it also repairs a half-finished earlier run, so a song whose row
+ * points at a missing file is looked up again in the old folder.
+ */
 function migrateLegacyStorage(database: SQLite.SQLiteDatabase) {
-  const legacyMusic = new Directory(Paths.document, 'music');
-  const legacyCovers = new Directory(Paths.document, 'covers');
-  try {
-    if (legacyCovers.exists) {
-      if (!coverDir.exists) coverDir.create({ intermediates: true });
-      for (const entry of legacyCovers.list()) if (entry instanceof File) entry.move(coverDir);
-      legacyCovers.delete();
+  // Rows still in the old database (an earlier run could open the new one before the old one moved).
+  const legacyDb = new Directory(Paths.document, 'SQLite');
+  if (new File(legacyDb, 'offline.db').exists) {
+    try {
+      database.execSync(`ATTACH DATABASE '${pathOf(legacyDb).replace(/'/g, "''")}/offline.db' AS legacy`);
+      database.execSync('INSERT OR IGNORE INTO tracks SELECT * FROM legacy.tracks');
+      database.execSync('DETACH DATABASE legacy');
+      legacyDb.delete();
+    } catch (error) {
+      console.warn('[offline] could not merge the old database', error);
     }
-  } catch (error) {
-    console.warn('[offline] could not move covers', error);
   }
+
+  // Covers are re-fetched by backfillCovers when missing, so a failed move loses nothing.
+  const legacyCovers = new Directory(Paths.document, 'covers');
+  if (legacyCovers.exists) {
+    for (const entry of legacyCovers.list()) {
+      try {
+        if (entry instanceof File && !new File(coverDir, entry.name).exists) entry.moveSync(coverDir);
+      } catch (error) {
+        console.warn('[offline] could not move a cover', error);
+      }
+    }
+    try {
+      legacyCovers.delete();
+    } catch {
+      // Leave it.
+    }
+  }
+
+  const legacyMusic = new Directory(Paths.document, 'music');
   if (!legacyMusic.exists) return;
-  const rows = database.getAllSync<OfflineTrack>('SELECT * FROM tracks');
-  for (const row of rows) {
-    if (row.audio_file.includes('/')) continue;
-    const old = new File(legacyMusic, row.audio_file);
+  for (const row of database.getAllSync<OfflineTrack>('SELECT * FROM tracks')) {
+    if (row.audio_file.includes('/') && audioFile(row.audio_file).exists) continue;
+    const ext = row.audio_file.split('.').pop() || 'mp3';
+    const old = new File(legacyMusic, `${row.id}.${ext}`);
     if (!old.exists) continue;
     try {
-      const ext = row.audio_file.split('.').pop() || 'mp3';
       const relative = readablePath(row, ext);
       const dest = audioFile(relative);
       if (!dest.parentDirectory.exists) dest.parentDirectory.create({ intermediates: true });
-      old.move(dest);
-      database.runSync('UPDATE tracks SET audio_file = ? WHERE id = ?', relative, row.id);
+      old.moveSync(dest);
+      database.runSync('UPDATE tracks SET audio_file = ?, size = ? WHERE id = ?', relative, dest.size ?? row.size, row.id);
     } catch (error) {
       console.warn('[offline] could not move', row.audio_file, error);
     }
   }
+  // What is left belongs to no saved song (an earlier run lost its row): the app can no longer play it.
   try {
-    if (legacyMusic.list().length === 0) legacyMusic.delete();
+    legacyMusic.delete();
   } catch {
     // Leave it.
   }
@@ -115,18 +144,18 @@ function database() {
     if (!supportDir.exists) supportDir.create({ intermediates: true });
     // The first layout kept the database in Documents/SQLite, which the Files app would show.
     const legacyDb = new Directory(Paths.document, 'SQLite');
-    if (legacyDb.exists && !new File(supportDir, 'offline.db').exists) {
+    if (new File(legacyDb, 'offline.db').exists && !new File(supportDir, 'offline.db').exists) {
       for (const name of ['offline.db', 'offline.db-wal', 'offline.db-shm']) {
         const file = new File(legacyDb, name);
-        if (file.exists) file.move(supportDir);
+        if (file.exists) file.moveSync(supportDir);
+      }
+      try {
+        legacyDb.delete();
+      } catch {
+        // Leave it.
       }
     }
-    try {
-      if (legacyDb.exists && legacyDb.list().length === 0) legacyDb.delete();
-    } catch {
-      // Leave it.
-    }
-    db = SQLite.openDatabaseSync('offline.db', undefined, supportPath());
+    db = SQLite.openDatabaseSync('offline.db', undefined, pathOf(supportDir));
     db.execSync(`CREATE TABLE IF NOT EXISTS tracks (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
@@ -190,7 +219,7 @@ export async function saveArtwork(paths: (string | null | undefined)[], dest: Fi
       const bytes = new Uint8Array(await res.arrayBuffer());
       if (!bytes.length) continue;
       if (dest.exists) dest.delete();
-      dest.write(bytes);
+      dest.writeSync(bytes);
       return true;
     } catch {
       return false;
@@ -261,7 +290,7 @@ async function downloadOne(track: LibraryTrack, onProgress: (p: number) => void)
     },
   });
   if (!audio.parentDirectory.exists) audio.parentDirectory.create({ intermediates: true });
-  partial.move(audio);
+  partial.moveSync(audio);
 
   const coverName = (await saveArtwork([track.cover_url, albumCoverPath(track.album_id)], new File(coverDir, `${track.id}.jpg`)))
     ? `${track.id}.jpg`

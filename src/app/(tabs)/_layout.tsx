@@ -19,6 +19,10 @@ export default function TabsLayout() {
           <MiniPlayer />
         </NativeTabs.BottomAccessory>
       ) : null}
+      <NativeTabs.Trigger name="(home)" hidden={downloadsOnly}>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
+        <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(library)" hidden={downloadsOnly}>
         <NativeTabs.Trigger.Icon sf={{ default: 'square.stack', selected: 'square.stack.fill' }} />
         <NativeTabs.Trigger.Label>{t('tabs.library')}</NativeTabs.Trigger.Label>

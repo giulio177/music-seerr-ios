@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePlayer, useCurrentItem } from '@/lib/player';
@@ -6,9 +7,14 @@ import { colors, useAccent } from '@/lib/theme';
 import { Cover } from './Cover';
 import { IconButton } from './ui';
 
-/** Now playing strip, shown as the native tab bar's bottom accessory. Tap opens the full player. */
+/**
+ * Now playing strip, shown as the native tab bar's bottom accessory. Tap opens the full player.
+ * `regular` sits above the full tab bar; `inline` is the compact form iOS puts between the minimized
+ * tab and Search after a scroll down (title and play only, like Apple Music).
+ */
 export function MiniPlayer() {
   const { t } = useTranslation();
+  const inline = NativeTabs.BottomAccessory.usePlacement() === 'inline';
   const item = useCurrentItem();
   const playing = usePlayer((s) => s.playing);
   const buffering = usePlayer((s) => s.buffering);
@@ -17,12 +23,12 @@ export function MiniPlayer() {
 
   return (
     <Pressable testID="mini-player" style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
-      <Cover path={item?.cover} local={item?.coverLocal} fallback={item?.coverFallback} size={36} />
+      <Cover path={item?.cover} local={item?.coverLocal} fallback={item?.coverFallback} size={inline ? 30 : 36} />
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.title}>
           {item?.title ?? t('player.nothing')}
         </Text>
-        {item ? (
+        {item && !inline ? (
           <Text numberOfLines={1} style={styles.artist}>
             {item.artist}
           </Text>
@@ -33,8 +39,8 @@ export function MiniPlayer() {
       ) : (
         <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} onPress={() => usePlayer.getState().toggle()} />
       )}
-      <IconButton icon="play-forward" label="Next" onPress={() => usePlayer.getState().next()} />
-      <View style={[styles.progress, { width: `${progress * 100}%`, backgroundColor: accent }]} />
+      {inline ? null : <IconButton icon="play-forward" label="Next" onPress={() => usePlayer.getState().next()} />}
+      {inline ? null : <View style={[styles.progress, { width: `${progress * 100}%`, backgroundColor: accent }]} />}
     </Pressable>
   );
 }
