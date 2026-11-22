@@ -6,7 +6,8 @@
     "shuffle": "Shuffle",
     "tracks_one": "{{count}} track",
     "tracks_other": "{{count}} tracks",
-    "unknownError": "Something went wrong."
+    "unknownError": "Something went wrong.",
+    "more": "More"
   },
   "tabs": {
     "home": "Home",
@@ -97,7 +98,14 @@
     "preview": "Preview",
     "repeat": "Repeat",
     "shuffle": "Shuffle",
-    "queueEmpty": "Nothing queued after this song."
+    "queueEmpty": "Nothing queued after this song.",
+    "goToAlbum": "Go to album",
+    "goToArtist": "Go to artist",
+    "remove": "Remove from queue",
+    "previous": "Previous",
+    "next": "Next",
+    "play": "Play",
+    "pause": "Pause"
   },
   "settings": {
     "account": "Account",

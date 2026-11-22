@@ -6,7 +6,8 @@
     "shuffle": "Casuale",
     "tracks_one": "{{count}} brano",
     "tracks_other": "{{count}} brani",
-    "unknownError": "Qualcosa è andato storto."
+    "unknownError": "Qualcosa è andato storto.",
+    "more": "Altro"
   },
   "tabs": {
     "home": "Home",
@@ -97,7 +98,14 @@
     "preview": "Anteprima",
     "repeat": "Ripeti",
     "shuffle": "Casuale",
-    "queueEmpty": "Niente in coda dopo questo brano."
+    "queueEmpty": "Niente in coda dopo questo brano.",
+    "goToAlbum": "Vai all'album",
+    "goToArtist": "Vai all'artista",
+    "remove": "Togli dalla coda",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "play": "Riproduci",
+    "pause": "Pausa"
   },
   "settings": {
     "account": "Account",
