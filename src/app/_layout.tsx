@@ -1,5 +1,5 @@
 import '@/lib/i18n';
-import { Stack } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -12,6 +12,13 @@ import { useOffline } from '@/lib/offline';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+// Dark navigation theme with a transparent background: the default light theme paints #f2f2f2 under
+// every navigator screen, which covered the backdrop.
+const theme: Theme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: 'transparent', card: colors.bg },
+};
 
 export default function RootLayout() {
   const status = useAuth((s) => s.status);
@@ -51,22 +58,41 @@ export default function RootLayout() {
   if (status === 'loading') return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar style="light" />
-      {/* One backdrop behind every screen: a per-screen backdrop as first child would hide the scroll view
+    <ThemeProvider value={theme}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+        <StatusBar style="light" />
+        {/* One backdrop behind every screen: a per-screen backdrop as first child would hide the scroll view
           from the tab bar, which looks for it through the first child to minimize on scroll. */}
-      <Backdrop />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-        <Stack.Protected guard={status === 'signedIn' || status === 'offline'}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="player" options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }} />
-          <Stack.Screen name="settings" options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }} />
-        </Stack.Protected>
-        <Stack.Protected guard={status === 'signedOut'}>
-          <Stack.Screen name="login" options={{ animation: 'fade' }} />
-        </Stack.Protected>
-      </Stack>
-      <ToastHost />
-    </GestureHandlerRootView>
+        <Backdrop />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        >
+          <Stack.Protected guard={status === 'signedIn' || status === 'offline'}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="player"
+              options={{
+                presentation: 'modal',
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="settings"
+              options={{
+                presentation: 'modal',
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'signedOut'}>
+            <Stack.Screen name="login" options={{ animation: 'fade' }} />
+          </Stack.Protected>
+        </Stack>
+        <ToastHost />
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
