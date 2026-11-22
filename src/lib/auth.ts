@@ -12,7 +12,7 @@ type AuthState = {
   serverUrl: string;
   token: string | null;
   user: User | null;
-  /** The last check could not reach the server; the app runs from offline downloads. */
+  /** The last request could not reach the server: server screens show the offline mode, downloads still play. */
   unreachable: boolean;
   load: () => Promise<void>;
   verify: (timeoutMs?: number) => Promise<void>;
@@ -69,11 +69,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     } catch {
       user = null;
     }
-    // Check the saved session briefly while the splash screen is up, so an unreachable server
-    // opens straight on the downloads; the session stays valid either way.
-    set({ serverUrl, token, user });
-    await get().verify(3500);
-    if (get().status === 'loading') set({ status: 'signedIn' });
+    // Open the app at once with the saved session (downloads work without the server),
+    // then confirm it in the background.
+    set({ status: 'signedIn', serverUrl, token, user });
+    get().verify();
   },
 
   verify: async (timeoutMs = 6000) => {
@@ -136,4 +135,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 bindSession(
   () => useAuth.getState(),
   () => useAuth.getState().expire(),
+  (reachable) => {
+    if (useAuth.getState().unreachable === reachable) useAuth.setState({ unreachable: !reachable });
+  },
 );

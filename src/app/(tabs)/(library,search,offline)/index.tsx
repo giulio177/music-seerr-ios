@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Cover } from '@/components/Cover';
-import { Backdrop, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { Backdrop, EmptyState, ErrorState, Loading, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
@@ -33,6 +33,7 @@ async function fetchPage(kind: Kind, offset: number, q: string): Promise<{ items
 export default function Library() {
   const { t } = useTranslation();
   const isGuest = useAuth((s) => !!s.user?.is_guest);
+  const unreachable = useAuth((s) => s.unreachable);
   const [kind, setKind] = useState<Kind>('playlists');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Item[]>([]);
@@ -69,11 +70,11 @@ export default function Library() {
   );
 
   useEffect(() => {
-    if (isGuest) return;
+    if (isGuest || unreachable) return;
     const timer = setTimeout(() => load('reset'), query ? 300 : 0);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, query, isGuest]);
+  }, [kind, query, isGuest, unreachable]);
 
   const open = (item: Item) => {
     if (kind === 'albums') router.push(`/album/${item.id}`);
@@ -85,7 +86,7 @@ export default function Library() {
     <Stack.Screen
       options={{
         title: t('tabs.library'),
-        headerSearchBarOptions: isGuest
+        headerSearchBarOptions: isGuest || unreachable
           ? undefined
           : { placeholder: t('library.filter'), onChangeText: (e) => setQuery(e.nativeEvent.text), hideWhenScrolling: true },
       }}
@@ -98,6 +99,16 @@ export default function Library() {
         <Backdrop />
         {header}
         <EmptyState icon="lock-closed-outline" title={t('library.guestTitle')} body={t('library.guestBody')} />
+      </View>
+    );
+  }
+
+  if (unreachable) {
+    return (
+      <View style={{ flex: 1 }}>
+        <Backdrop />
+        {header}
+        <OfflineState />
       </View>
     );
   }

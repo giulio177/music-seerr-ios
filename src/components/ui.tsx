@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { colors, radius, useAccent, withAlpha } from '@/lib/theme';
 
 /** Dark backdrop with two soft accent glows, shared by every screen. */
@@ -137,24 +138,35 @@ export function EmptyState({ icon, title, body, action }: { icon: keyof typeof I
   );
 }
 
-/** Error view: offline errors point to the downloads tab. */
+/** Offline mode placeholder for screens that need the server; Retry checks the server again. */
+export function OfflineState({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useTranslation();
+  const [checking, setChecking] = useState(false);
+  const retry = async () => {
+    setChecking(true);
+    await useAuth.getState().verify();
+    setChecking(false);
+    onRetry?.();
+  };
+  return (
+    <EmptyState
+      icon="cloud-offline-outline"
+      title={t('errors.offlineTitle')}
+      body={t('errors.offlineBody')}
+      action={
+        <View style={{ gap: 10, marginTop: 16, alignSelf: 'stretch' }}>
+          <AccentButton label={t('errors.openDownloads')} icon="arrow-down-circle" onPress={() => router.navigate('/(tabs)/(offline)/offline')} />
+          <AccentButton label={t('common.retry')} variant="glass" loading={checking} onPress={retry} />
+        </View>
+      }
+    />
+  );
+}
+
+/** Error view: offline errors show the offline mode. */
 export function ErrorState({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
   const { t } = useTranslation();
-  if (error.offline) {
-    return (
-      <EmptyState
-        icon="cloud-offline-outline"
-        title={t('errors.offlineTitle')}
-        body={t('errors.offlineBody')}
-        action={
-          <View style={{ gap: 10, marginTop: 16, alignSelf: 'stretch' }}>
-            <AccentButton label={t('errors.openDownloads')} icon="arrow-down-circle" onPress={() => router.navigate('/(tabs)/(offline)/offline')} />
-            <AccentButton label={t('common.retry')} variant="glass" onPress={onRetry} />
-          </View>
-        }
-      />
-    );
-  }
+  if (error.offline) return <OfflineState onRetry={onRetry} />;
   return (
     <EmptyState
       icon="alert-circle-outline"

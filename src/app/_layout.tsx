@@ -37,10 +37,12 @@ export default function RootLayout() {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => undefined);
   }, [status]);
 
-  // Check the server again whenever the app comes back to the foreground (for example back home on Wi-Fi).
+  // Back in the foreground: check the server again (for example back home on Wi-Fi) and pick up songs deleted in the Files app.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && useAuth.getState().status === 'signedIn') useAuth.getState().verify();
+      if (state !== 'active') return;
+      useOffline.getState().refresh();
+      if (useAuth.getState().status === 'signedIn') useAuth.getState().verify();
     });
     return () => sub.remove();
   }, []);

@@ -108,8 +108,8 @@
     "offlineBanner": "Server non raggiungibile. I brani scaricati funzionano comunque."
   },
   "errors": {
-    "offlineTitle": "Server non raggiungibile",
-    "offlineBody": "Puoi comunque ascoltare i brani scaricati.",
+    "offlineTitle": "Modalità offline",
+    "offlineBody": "Il server Music Seerr non è raggiungibile. I brani scaricati sono nella tab Scaricati.",
     "openDownloads": "Apri i download"
   }
 }

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { TrackRow } from '@/components/TrackRow';
@@ -13,15 +13,7 @@ import { colors } from '@/lib/theme';
 export default function Offline() {
   const { t } = useTranslation();
   const saved = useOffline((s) => s.tracks);
-  const unreachable = useAuth((s) => s.unreachable);
   const downloadsOnly = useAuth((s) => s.status === 'offline');
-  const [retrying, setRetrying] = useState(false);
-
-  const retry = async () => {
-    setRetrying(true);
-    await useAuth.getState().verify();
-    setRetrying(false);
-  };
 
   const tracks = useMemo(
     () =>
@@ -43,15 +35,10 @@ export default function Offline() {
         contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
         ListHeaderComponent={
           <View style={styles.header}>
-            {unreachable || downloadsOnly ? (
+            {downloadsOnly ? (
               <View style={styles.banner}>
-                <Text style={styles.bannerText}>{t(unreachable ? 'settings.offlineBanner' : 'offline.downloadsOnly')}</Text>
-                <AccentButton
-                  label={t(unreachable ? 'common.retry' : 'offline.signIn')}
-                  variant="glass"
-                  loading={retrying}
-                  onPress={unreachable ? retry : () => useAuth.getState().leaveDownloadsOnly()}
-                />
+                <Text style={styles.bannerText}>{t('offline.downloadsOnly')}</Text>
+                <AccentButton label={t('offline.signIn')} variant="glass" onPress={() => useAuth.getState().leaveDownloadsOnly()} />
               </View>
             ) : null}
             {tracks.length ? (

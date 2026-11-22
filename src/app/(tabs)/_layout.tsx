@@ -9,8 +9,8 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const { accent } = useAccent();
   const hasQueue = usePlayer((s) => s.queue.length > 0);
-  // Without a server (unreachable, or no account) only the downloads make sense.
-  const downloadsOnly = useAuth((s) => s.status === 'offline' || s.unreachable);
+  // Without an account only the downloads make sense; an unreachable server keeps every tab (they show the offline mode).
+  const downloadsOnly = useAuth((s) => s.status === 'offline');
 
   return (
     <NativeTabs key={downloadsOnly ? 'downloads' : 'full'} tintColor={accent} minimizeBehavior="onScrollDown" backgroundColor={colors.bg}>

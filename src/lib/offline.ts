@@ -5,8 +5,9 @@ import { absoluteUrl, api, authHeaders } from './api';
 import type { LibraryTrack, Lyrics } from './types';
 
 /**
- * Offline library: audio and covers live in the app's Documents folder, metadata in SQLite.
- * Paths are stored as file names only, because iOS changes the container path on every update.
+ * Offline library. Songs live in Documents as `<Artist>/<Album>/<NN> <Title>.<ext>`, which the Files app shows
+ * under "On My iPhone > Music Seerr" (UIFileSharingEnabled). Covers and the SQLite metadata stay hidden in
+ * Library/Application Support. Paths are stored relative, because iOS changes the container path on every update.
  */
 export type OfflineTrack = {
   id: string;
@@ -25,13 +26,107 @@ export type OfflineTrack = {
   added_at: number;
 };
 
-const musicDir = new Directory(Paths.document, 'music');
-const coverDir = new Directory(Paths.document, 'covers');
+const musicDir = Paths.document;
+const supportDir = new Directory(Paths.document.parentDirectory, 'Library', 'Application Support', 'MusicSeerr');
+const coverDir = new Directory(supportDir, 'covers');
+const partialDir = new Directory(Paths.cache, 'downloads');
+
+/** Relative audio path (`Artist/Album/01 Title.mp3`) to a File. */
+function audioFile(relative: string) {
+  return new File(musicDir, ...relative.split('/'));
+}
+
+/** File name part safe for the Files app: no path separators or reserved characters. */
+function safeName(value: string | null | undefined, fallback: string) {
+  const cleaned = (value ?? '')
+    .replace(/[\\/:*?"<>|#%\u0000-\u001f]/g, '_')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
+    .slice(0, 80)
+    .trim();
+  return cleaned || fallback;
+}
+
+function readablePath(track: Pick<LibraryTrack, 'id' | 'title' | 'artist' | 'album' | 'index_number'>, ext: string) {
+  const number = track.index_number ? `${String(track.index_number).padStart(2, '0')} ` : '';
+  const base = [safeName(track.artist, 'Unknown artist'), safeName(track.album, 'Unknown album'), `${number}${safeName(track.title, track.id)}`].join('/');
+  // Two different songs can share artist, album, and title; the ID keeps them apart.
+  return audioFile(`${base}.${ext}`).exists ? `${base} (${track.id.slice(0, 6)}).${ext}` : `${base}.${ext}`;
+}
+
+/** Deletes empty album and artist folders left behind by a removed song. */
+function pruneEmptyFolders(relative: string) {
+  const parts = relative.split('/').slice(0, -1);
+  while (parts.length) {
+    const dir = new Directory(musicDir, ...parts);
+    try {
+      if (dir.exists && dir.list().length === 0) dir.delete();
+      else return;
+    } catch {
+      return;
+    }
+    parts.pop();
+  }
+}
+
+function supportPath() {
+  return decodeURIComponent(supportDir.uri.replace(/^file:\/\//, ''));
+}
+
+/** One-time move from the first layout (Documents/music/<id>.<ext>, Documents/covers, Documents/SQLite). */
+function migrateLegacyStorage(database: SQLite.SQLiteDatabase) {
+  const legacyMusic = new Directory(Paths.document, 'music');
+  const legacyCovers = new Directory(Paths.document, 'covers');
+  try {
+    if (legacyCovers.exists) {
+      if (!coverDir.exists) coverDir.create({ intermediates: true });
+      for (const entry of legacyCovers.list()) if (entry instanceof File) entry.move(coverDir);
+      legacyCovers.delete();
+    }
+  } catch (error) {
+    console.warn('[offline] could not move covers', error);
+  }
+  if (!legacyMusic.exists) return;
+  const rows = database.getAllSync<OfflineTrack>('SELECT * FROM tracks');
+  for (const row of rows) {
+    if (row.audio_file.includes('/')) continue;
+    const old = new File(legacyMusic, row.audio_file);
+    if (!old.exists) continue;
+    try {
+      const ext = row.audio_file.split('.').pop() || 'mp3';
+      const relative = readablePath(row, ext);
+      const dest = audioFile(relative);
+      if (!dest.parentDirectory.exists) dest.parentDirectory.create({ intermediates: true });
+      old.move(dest);
+      database.runSync('UPDATE tracks SET audio_file = ? WHERE id = ?', relative, row.id);
+    } catch (error) {
+      console.warn('[offline] could not move', row.audio_file, error);
+    }
+  }
+  try {
+    if (legacyMusic.list().length === 0) legacyMusic.delete();
+  } catch {
+    // Leave it.
+  }
+}
 
 let db: SQLite.SQLiteDatabase | null = null;
 function database() {
   if (!db) {
-    db = SQLite.openDatabaseSync('offline.db');
+    if (!supportDir.exists) supportDir.create({ intermediates: true });
+    // The first layout kept the database in Documents/SQLite, which the Files app would show.
+    const legacyDb = new Directory(Paths.document, 'SQLite');
+    if (legacyDb.exists && !new File(supportDir, 'offline.db').exists) {
+      for (const name of ['offline.db', 'offline.db-wal', 'offline.db-shm']) {
+        const file = new File(legacyDb, name);
+        if (file.exists) file.move(supportDir);
+      }
+    }
+    try {
+      if (legacyDb.exists && legacyDb.list().length === 0) legacyDb.delete();
+    } catch {
+      // Leave it.
+    }
+    db = SQLite.openDatabaseSync('offline.db', undefined, supportPath());
     db.execSync(`CREATE TABLE IF NOT EXISTS tracks (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
@@ -48,12 +143,13 @@ function database() {
       size INTEGER NOT NULL DEFAULT 0,
       added_at REAL NOT NULL
     )`);
+    migrateLegacyStorage(db);
   }
   return db;
 }
 
 function ensureDirs() {
-  for (const dir of [musicDir, coverDir]) {
+  for (const dir of [coverDir, partialDir]) {
     if (!dir.exists) dir.create({ intermediates: true });
   }
 }
@@ -73,7 +169,7 @@ export function streamPath(track: Pick<LibraryTrack, 'id' | 'path'>) {
 }
 
 export function localAudioUri(track: OfflineTrack) {
-  return new File(musicDir, track.audio_file).uri;
+  return audioFile(track.audio_file).uri;
 }
 
 export function localCoverUri(track: OfflineTrack) {
@@ -110,10 +206,10 @@ async function fetchLyrics(track: LibraryTrack): Promise<Lyrics | null> {
 
 async function downloadOne(track: LibraryTrack, onProgress: (p: number) => void): Promise<OfflineTrack> {
   ensureDirs();
-  const audioName = `${track.id}.${audioExtension(track.path)}`;
-  const audio = new File(musicDir, audioName);
-  if (audio.exists) audio.delete();
-  const partial = new File(musicDir, `${audioName}.part`);
+  const audioName = readablePath(track, audioExtension(track.path));
+  const audio = audioFile(audioName);
+  // Partial downloads stay in Caches so the Files app never shows half a song.
+  const partial = new File(partialDir, `${track.id}.part`);
   if (partial.exists) partial.delete();
   await File.downloadFileAsync(absoluteUrl(streamPath(track)), partial, {
     headers: authHeaders(),
@@ -121,6 +217,7 @@ async function downloadOne(track: LibraryTrack, onProgress: (p: number) => void)
       if (totalBytes > 0) onProgress(bytesWritten / totalBytes);
     },
   });
+  if (!audio.parentDirectory.exists) audio.parentDirectory.create({ intermediates: true });
   partial.move(audio);
 
   let coverName: string | null = `${track.id}.jpg`;
@@ -196,8 +293,8 @@ export const useOffline = create<OfflineState>((set, get) => ({
     const rows = database().getAllSync<OfflineTrack>('SELECT * FROM tracks');
     const tracks: Record<string, OfflineTrack> = {};
     for (const row of rows) {
-      // Drop rows whose audio file disappeared (for example after a restore).
-      if (new File(musicDir, row.audio_file).exists) tracks[row.id] = row;
+      // Drop rows whose audio file disappeared (deleted in the Files app, or after a restore).
+      if (audioFile(row.audio_file).exists) tracks[row.id] = row;
       else database().runSync('DELETE FROM tracks WHERE id = ?', row.id);
     }
     set({ tracks });
@@ -219,13 +316,14 @@ export const useOffline = create<OfflineState>((set, get) => ({
   remove: (id) => {
     const track = get().tracks[id];
     if (!track) return;
-    for (const file of [new File(musicDir, track.audio_file), track.cover_file && new File(coverDir, track.cover_file)]) {
+    for (const file of [audioFile(track.audio_file), track.cover_file && new File(coverDir, track.cover_file)]) {
       try {
         if (file && file.exists) file.delete();
       } catch {
         // Already gone.
       }
     }
+    pruneEmptyFolders(track.audio_file);
     database().runSync('DELETE FROM tracks WHERE id = ?', id);
     set((s) => {
       const tracks = { ...s.tracks };
@@ -236,12 +334,20 @@ export const useOffline = create<OfflineState>((set, get) => ({
 
   removeAll: () => {
     queue.length = 0;
-    for (const dir of [musicDir, coverDir]) {
+    // Documents is shared with the Files app: delete only the songs the app saved.
+    for (const track of Object.values(get().tracks)) {
       try {
-        if (dir.exists) dir.delete();
+        const file = audioFile(track.audio_file);
+        if (file.exists) file.delete();
       } catch {
-        // Ignore.
+        // Already gone.
       }
+      pruneEmptyFolders(track.audio_file);
+    }
+    try {
+      if (coverDir.exists) coverDir.delete();
+    } catch {
+      // Ignore.
     }
     database().runSync('DELETE FROM tracks');
     set({ tracks: {}, active: {} });

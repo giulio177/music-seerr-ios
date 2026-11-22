@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } fro
 import { Cover } from '@/components/Cover';
 import { toast } from '@/components/Toast';
 import { TrackRow } from '@/components/TrackRow';
-import { Backdrop, EmptyState, ErrorState } from '@/components/ui';
+import { Backdrop, EmptyState, ErrorState, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePlayer, useCurrentItem } from '@/lib/player';
@@ -20,6 +20,7 @@ type Results = { library: LibraryTrack[]; catalog: CatalogTrack[] };
 export default function Search() {
   const { t } = useTranslation();
   const isGuest = useAuth((s) => !!s.user?.is_guest);
+  const unreachable = useAuth((s) => s.unreachable);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Results | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,10 +54,11 @@ export default function Search() {
   };
 
   useEffect(() => {
+    if (unreachable) return;
     const timer = setTimeout(() => run(query), 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, unreachable]);
 
   // Follow requested downloads until they finish.
   const pendingIds = Object.values(jobs).filter((j) => !TERMINAL.has(j.status)).map((j) => j.job_id);
@@ -99,7 +101,7 @@ export default function Search() {
       <Stack.Screen
         options={{
           title: t('tabs.search'),
-          headerSearchBarOptions: {
+          headerSearchBarOptions: unreachable ? undefined : {
             placeholder: t('search.placeholder'),
             onChangeText: (e) => setQuery(e.nativeEvent.text),
             hideWhenScrolling: false,
@@ -107,33 +109,37 @@ export default function Search() {
           },
         }}
       />
-      <SectionList
-        sections={sections}
-        keyExtractor={(item, index) => `${item.id}:${index}`}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
-        stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
-        ListHeaderComponent={loading ? <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} /> : undefined}
-        ListEmptyComponent={
-          loading ? undefined : error ? (
-            <ErrorState error={error} onRetry={() => run(query)} />
-          ) : (
-            <EmptyState icon="search" body={results ? t('search.noResults') : t('search.hint')} />
-          )
-        }
-        renderItem={({ item, section, index }) =>
-          section.key === 'library' ? (
-            <TrackRow
-              track={item as LibraryTrack}
-              onPress={() => usePlayer.getState().playTracks(section.data as LibraryTrack[], index)}
-            />
-          ) : (
-            <CatalogRow track={item as CatalogTrack} job={jobs[item.id]} canRequest onRequest={() => request(item as CatalogTrack)} />
-          )
-        }
-      />
+      {unreachable ? (
+        <OfflineState />
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item, index) => `${item.id}:${index}`}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
+          ListHeaderComponent={loading ? <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} /> : undefined}
+          ListEmptyComponent={
+            loading ? undefined : error ? (
+              <ErrorState error={error} onRetry={() => run(query)} />
+            ) : (
+              <EmptyState icon="search" body={results ? t('search.noResults') : t('search.hint')} />
+            )
+          }
+          renderItem={({ item, section, index }) =>
+            section.key === 'library' ? (
+              <TrackRow
+                track={item as LibraryTrack}
+                onPress={() => usePlayer.getState().playTracks(section.data as LibraryTrack[], index)}
+              />
+            ) : (
+              <CatalogRow track={item as CatalogTrack} job={jobs[item.id]} canRequest onRequest={() => request(item as CatalogTrack)} />
+            )
+          }
+        />
+      )}
     </View>
   );
 }

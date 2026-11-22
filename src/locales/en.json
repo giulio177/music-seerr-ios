@@ -108,8 +108,8 @@
     "offlineBanner": "Server unreachable. Downloaded songs still play."
   },
   "errors": {
-    "offlineTitle": "Server unreachable",
-    "offlineBody": "You can still play your downloaded songs.",
+    "offlineTitle": "Offline mode",
+    "offlineBody": "The Music Seerr server is unreachable. Your downloaded songs are in the Downloads tab.",
     "openDownloads": "Open downloads"
   }
 }

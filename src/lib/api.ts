@@ -3,10 +3,12 @@ type Session = { serverUrl: string; token: string | null };
 // The auth store registers itself here, so this module does not import it (no require cycle).
 let currentSession: () => Session = () => ({ serverUrl: '', token: null });
 let onUnauthorized: () => void = () => undefined;
+let onReachability: (reachable: boolean) => void = () => undefined;
 
-export function bindSession(get: () => Session, unauthorized: () => void) {
+export function bindSession(get: () => Session, unauthorized: () => void, reachability: (reachable: boolean) => void) {
   currentSession = get;
   onUnauthorized = unauthorized;
+  onReachability = reachability;
 }
 
 export class ApiError extends Error {
@@ -75,10 +77,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
+    if (server === currentSession().serverUrl) onReachability(false);
     throw new ApiError(0, 'offline');
   } finally {
     clearTimeout(timer);
   }
+  if (server === currentSession().serverUrl) onReachability(true);
   const text = await response.text();
   let data: any = null;
   try {
