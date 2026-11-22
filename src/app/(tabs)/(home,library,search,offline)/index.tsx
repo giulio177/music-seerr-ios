@@ -1,231 +1,184 @@
 import { router, Stack } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CatalogRow } from '@/components/CatalogRow';
 import { Cover } from '@/components/Cover';
 import { TabHeader, TopFade } from '@/components/TabHeader';
-import { EmptyState, ErrorState, Loading, OfflineState } from '@/components/ui';
-import { api, ApiError } from '@/lib/api';
+import { Loading, OfflineState } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { colors, useAccent, withAlpha } from '@/lib/theme';
-import type { Album, Artist, Playlist } from '@/lib/types';
+import { usePlayer } from '@/lib/player';
+import { useRequests } from '@/lib/requests';
+import { colors } from '@/lib/theme';
+import type { CatalogTrack, LibraryTrack, Playlist } from '@/lib/types';
+import { useApi } from '@/lib/useApi';
 
-type Kind = 'playlists' | 'albums' | 'artists';
-type Item = { id: string; name: string; sub?: string; cover?: string | null };
-const PAGE = 100;
+/** A row of `/api/history/plays`. */
+type Play = {
+  id: number;
+  track_id: string;
+  title: string;
+  artist: string;
+  album: string;
+  source: string;
+  duration: number;
+  cover_url: string;
+};
 
-async function fetchPage(kind: Kind, offset: number, q: string): Promise<{ items: Item[]; total: number }> {
-  if (kind === 'playlists') {
-    const list = await api<Playlist[]>('/api/jellyfin/playlists');
-    const filtered = q ? list.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())) : list;
-    return {
-      items: filtered.map((p) => ({ id: p.id, name: p.name, cover: p.cover_url ?? `/api/jellyfin/image/${p.id}`, sub: String(p.track_count ?? '') })),
-      total: filtered.length,
-    };
-  }
-  if (kind === 'albums') {
-    const res = await api<{ total: number; albums: Album[] }>('/api/jellyfin/albums', { query: { q, limit: PAGE, offset } });
-    return { items: res.albums.map((a) => ({ id: a.id, name: a.name, sub: a.artist, cover: a.cover_url })), total: res.total };
-  }
-  const res = await api<{ total: number; artists: Artist[] }>('/api/jellyfin/artists', { query: { q, limit: PAGE, offset } });
-  return { items: res.artists.map((a) => ({ id: a.id, name: a.name, cover: a.cover_url })), total: res.total };
-}
+const JELLYFIN_ID = /^[0-9a-f]{32}$/;
+const TILE = 148;
 
-export default function Library() {
+export default function Home() {
   const { t } = useTranslation();
-  const isGuest = useAuth((s) => !!s.user?.is_guest);
   const unreachable = useAuth((s) => s.unreachable);
-  const [kind, setKind] = useState<Kind>('playlists');
-  const [query, setQuery] = useState('');
-  const [items, setItems] = useState<Item[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<ApiError | null>(null);
-  const seq = useRef(0);
-  const { width } = useWindowDimensions();
-  const tile = (width - 16 * 3) / 2;
+  const isGuest = useAuth((s) => !!s.user?.is_guest);
+  const plays = useApi<Play[]>(unreachable || isGuest ? null : '/api/history/plays', { limit: 60 });
+  const playlists = useApi<Playlist[]>(unreachable || isGuest ? null : '/api/jellyfin/playlists');
+  const picks = useApi<{ tracks: CatalogTrack[] }>(unreachable ? null : '/api/recommendations', { limit: 12 });
+  const { jobs, request } = useRequests();
 
-  const load = useCallback(
-    async (mode: 'reset' | 'refresh' | 'more') => {
-      const id = ++seq.current;
-      const offset = mode === 'more' ? items.length : 0;
-      if (mode === 'reset') setLoading(true);
-      if (mode === 'refresh') setRefreshing(true);
-      try {
-        const page = await fetchPage(kind, offset, query.trim());
-        if (id !== seq.current) return;
-        setItems((prev) => (mode === 'more' ? [...prev, ...page.items] : page.items));
-        setTotal(page.total);
-        setError(null);
-      } catch (e) {
-        if (id === seq.current) setError(e instanceof ApiError ? e : new ApiError(500, String(e)));
-      } finally {
-        if (id === seq.current) {
-          setLoading(false);
-          setRefreshing(false);
-        }
-      }
-    },
-    [kind, query, items.length],
-  );
-
-  useEffect(() => {
-    if (isGuest || unreachable) return;
-    const timer = setTimeout(() => load('reset'), query ? 300 : 0);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, query, isGuest, unreachable]);
-
-  const open = (item: Item) => {
-    if (kind === 'albums') router.push(`/album/${item.id}`);
-    else if (kind === 'artists') router.push(`/artist/${item.id}`);
-    else router.push(`/playlist/${item.id}`);
-  };
+  // Library songs only (previews cannot be replayed), newest first, each song once.
+  const recent = useMemo(() => {
+    const seen = new Set<string>();
+    const tracks: LibraryTrack[] = [];
+    for (const play of plays.data ?? []) {
+      if (play.source === 'preview' || !JELLYFIN_ID.test(play.track_id) || seen.has(play.track_id)) continue;
+      seen.add(play.track_id);
+      tracks.push({
+        id: play.track_id,
+        title: play.title,
+        artist: play.artist,
+        album: play.album,
+        duration_sec: play.duration,
+        stream_url: `/api/jellyfin/stream/${play.track_id}`,
+        cover_url: play.cover_url || `/api/jellyfin/image/${play.track_id}`,
+      });
+      if (tracks.length >= 20) break;
+    }
+    return tracks;
+  }, [plays.data]);
 
   const header = <Stack.Screen options={{ headerShown: false }} />;
 
-  if (isGuest || unreachable) {
+  if (unreachable) {
     return (
       <View style={{ flex: 1 }}>
         {header}
         <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1 }}>
-          <TabHeader title={t('tabs.library')} />
-          {unreachable ? (
-            <OfflineState />
-          ) : (
-            <EmptyState icon="lock-closed-outline" title={t('library.guestTitle')} body={t('library.guestBody')} />
-          )}
+          <TabHeader title={t('tabs.home')} />
+          <OfflineState />
         </ScrollView>
         <TopFade />
       </View>
     );
   }
 
-  const grid = kind !== 'artists';
+  const loading = plays.loading || playlists.loading || picks.loading;
+  const refresh = async () => {
+    await Promise.all([plays.refresh(), playlists.refresh(), picks.refresh()]);
+  };
+
   return (
     <View style={{ flex: 1 }}>
       {header}
-      <FlatList
-        key={kind}
-        data={loading || error ? [] : items}
-        numColumns={grid ? 2 : 1}
-        keyExtractor={(item) => item.id}
+      <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        columnWrapperStyle={grid ? { gap: 16, paddingHorizontal: 16 } : undefined}
-        contentContainerStyle={{ paddingBottom: 140, gap: grid ? 18 : 0 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={colors.textSecondary} />}
-        onEndReachedThreshold={0.6}
-        onEndReached={() => {
-          if (!loading && kind !== 'playlists' && items.length < total) load('more');
-        }}
-        keyboardDismissMode="on-drag"
-        ListHeaderComponent={
-          <>
-            <TabHeader title={t('tabs.library')} />
-            <FilterField value={query} onChange={setQuery} placeholder={t('library.filter')} />
-            <Segments value={kind} onChange={(k) => { setItems([]); setKind(k); }} />
-          </>
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={{ height: 300 }}><Loading /></View>
-          ) : error ? (
-            <View style={{ height: 420 }}><ErrorState error={error} onRetry={() => load('reset')} /></View>
-          ) : (
-            <View style={{ height: 300 }}><EmptyState icon="albums-outline" body={t('library.empty')} /></View>
-          )
-        }
-        renderItem={({ item }) =>
-          grid ? (
-            <Pressable onPress={() => open(item)} style={({ pressed }) => ({ width: tile, opacity: pressed ? 0.75 : 1 })}>
-              <Cover path={item.cover} size={tile} />
-              <Text numberOfLines={1} style={styles.tileTitle}>{item.name}</Text>
-              {item.sub ? (
-                <Text numberOfLines={1} style={styles.tileSub}>
-                  {kind === 'playlists' ? t('common.tracks', { count: Number(item.sub) || 0 }) : item.sub}
-                </Text>
-              ) : null}
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => open(item)} style={({ pressed }) => [styles.artistRow, pressed && { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-              <Cover path={item.cover} size={52} round />
-              <Text numberOfLines={1} style={styles.artistName}>{item.name}</Text>
-            </Pressable>
-          )
-        }
-      />
+        contentContainerStyle={{ paddingBottom: 140 }}
+        refreshControl={<RefreshControl refreshing={plays.refreshing || picks.refreshing} onRefresh={refresh} tintColor={colors.textSecondary} />}
+      >
+        <TabHeader title={t('tabs.home')} />
+        {loading && !recent.length && !picks.data ? (
+          <View style={{ height: 300 }}>
+            <Loading />
+          </View>
+        ) : null}
+
+        {recent.length ? (
+          <Shelf title={t('home.recent')}>
+            <FlatList
+              horizontal
+              data={recent}
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.shelf}
+              renderItem={({ item, index }) => (
+                <Tile
+                  title={item.title}
+                  sub={item.artist}
+                  cover={item.cover_url}
+                  onPress={() => usePlayer.getState().playTracks(recent, index)}
+                />
+              )}
+            />
+          </Shelf>
+        ) : null}
+
+        {playlists.data?.length ? (
+          <Shelf title={t('home.playlists')}>
+            <FlatList
+              horizontal
+              data={playlists.data}
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.shelf}
+              renderItem={({ item }) => (
+                <Tile
+                  title={item.name}
+                  sub={t('common.tracks', { count: item.track_count ?? 0 })}
+                  cover={item.cover_url ?? `/api/jellyfin/image/${item.id}`}
+                  onPress={() => router.push(`/playlist/${item.id}`)}
+                />
+              )}
+            />
+          </Shelf>
+        ) : null}
+
+        {picks.data?.tracks.length ? (
+          <Shelf title={t('home.picks')}>
+            {picks.data.tracks.map((track) => (
+              <CatalogRow key={track.id} track={track} job={jobs[track.id]} onRequest={() => request(track)} />
+            ))}
+          </Shelf>
+        ) : null}
+
+        {!loading && !recent.length && !playlists.data?.length && !picks.data?.tracks.length ? (
+          <Text style={styles.empty}>{t('home.empty')}</Text>
+        ) : null}
+      </ScrollView>
       <TopFade />
     </View>
   );
 }
 
-function FilterField({ value, onChange, placeholder }: { value: string; onChange: (text: string) => void; placeholder: string }) {
+function Shelf({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View style={styles.filter}>
-      <Ionicons name="search" size={17} color={colors.textTertiary} />
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        autoCapitalize="none"
-        autoCorrect={false}
-        clearButtonMode="while-editing"
-        returnKeyType="search"
-        style={styles.filterInput}
-      />
+    <View style={{ marginTop: 14 }}>
+      <Text style={styles.shelfTitle}>{title}</Text>
+      {children}
     </View>
   );
 }
 
-function Segments({ value, onChange }: { value: Kind; onChange: (kind: Kind) => void }) {
-  const { t } = useTranslation();
-  const { accent } = useAccent();
-  const kinds: Kind[] = ['playlists', 'albums', 'artists'];
+function Tile({ title, sub, cover, onPress }: { title: string; sub?: string; cover?: string | null; onPress: () => void }) {
   return (
-    <View style={styles.segments}>
-      {kinds.map((k) => {
-        const active = k === value;
-        return (
-          <Pressable
-            key={k}
-            onPress={() => onChange(k)}
-            style={[styles.segment, active && { backgroundColor: withAlpha(accent, 0.22), borderColor: withAlpha(accent, 0.55) }]}
-          >
-            <Text style={[styles.segmentLabel, active && { color: colors.text }]}>{t(`library.${k}`)}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Pressable onPress={onPress} style={({ pressed }) => ({ width: TILE, opacity: pressed ? 0.75 : 1 })}>
+      <Cover path={cover} size={TILE} />
+      <Text numberOfLines={1} style={styles.tileTitle}>
+        {title}
+      </Text>
+      {sub ? (
+        <Text numberOfLines={1} style={styles.tileSub}>
+          {sub}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  filter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  filterInput: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: 9 },
-  segments: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 },
-  segment: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.glassBorder,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  segmentLabel: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
-  tileTitle: { color: colors.text, fontSize: 15, fontWeight: '600', marginTop: 8 },
+  shelfTitle: { color: colors.text, fontSize: 22, fontWeight: '700', paddingHorizontal: 16, marginBottom: 10 },
+  shelf: { paddingHorizontal: 16, gap: 14 },
+  tileTitle: { color: colors.text, fontSize: 14, fontWeight: '600', marginTop: 8 },
   tileSub: { color: colors.textSecondary, fontSize: 13, marginTop: 1 },
-  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 8 },
-  artistName: { color: colors.text, fontSize: 17, fontWeight: '500', flex: 1 },
+  empty: { color: colors.textSecondary, fontSize: 15, textAlign: 'center', padding: 32 },
 });
