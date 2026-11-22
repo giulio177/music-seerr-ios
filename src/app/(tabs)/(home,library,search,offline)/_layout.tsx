@@ -21,7 +21,7 @@ export default function SharedStack() {
         headerTitleStyle: { color: colors.text },
         headerLargeTitleStyle: { color: colors.text },
         headerBackButtonDisplayMode: 'minimal',
-        contentStyle: { backgroundColor: colors.bg },
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     />
   );

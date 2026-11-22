@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastHost } from '@/components/Toast';
+import { Backdrop } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useOffline } from '@/lib/offline';
 import { colors } from '@/lib/theme';
@@ -52,10 +53,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      {/* One backdrop behind every screen: a per-screen backdrop as first child would hide the scroll view
+          from the tab bar, which looks for it through the first child to minimize on scroll. */}
+      <Backdrop />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
         <Stack.Protected guard={status === 'signedIn' || status === 'offline'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="player" options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }} />
+          <Stack.Screen name="settings" options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedOut'}>
           <Stack.Screen name="login" options={{ animation: 'fade' }} />

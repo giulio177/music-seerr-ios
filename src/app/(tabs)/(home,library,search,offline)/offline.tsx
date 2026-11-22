@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { TrackRow } from '@/components/TrackRow';
-import { AccentButton, Backdrop, EmptyState } from '@/components/ui';
+import { TabHeader, TopFade } from '@/components/TabHeader';
+import { AccentButton, EmptyState } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { formatBytes } from '@/lib/format';
 import { offlineToLibrary, useOffline } from '@/lib/offline';
@@ -26,8 +27,7 @@ export default function Offline() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Backdrop />
-      <Stack.Screen options={{ title: t('offline.title') }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <FlatList
         data={tracks}
         keyExtractor={(item) => item.id}
@@ -35,6 +35,9 @@ export default function Offline() {
         contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
         ListHeaderComponent={
           <View style={styles.header}>
+            <View style={{ marginHorizontal: -16 }}>
+              <TabHeader title={t('offline.title')} />
+            </View>
             {downloadsOnly ? (
               <View style={styles.banner}>
                 <Text style={styles.bannerText}>{t('offline.downloadsOnly')}</Text>
@@ -63,6 +66,7 @@ export default function Offline() {
         ListEmptyComponent={<EmptyState icon="arrow-down-circle-outline" body={t('offline.empty')} />}
         renderItem={({ item, index }) => <TrackRow track={item} onPress={() => usePlayer.getState().playTracks(tracks, index)} />}
       />
+      <TopFade />
     </View>
   );
 }

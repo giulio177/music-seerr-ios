@@ -1,9 +1,11 @@
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Cover } from '@/components/Cover';
-import { Backdrop, EmptyState, ErrorState, Loading, OfflineState } from '@/components/ui';
+import { TabHeader, TopFade } from '@/components/TabHeader';
+import { EmptyState, ErrorState, Loading, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
@@ -82,33 +84,21 @@ export default function Library() {
     else router.push(`/playlist/${item.id}`);
   };
 
-  const header = (
-    <Stack.Screen
-      options={{
-        title: t('tabs.library'),
-        headerSearchBarOptions: isGuest || unreachable
-          ? undefined
-          : { placeholder: t('library.filter'), onChangeText: (e) => setQuery(e.nativeEvent.text), hideWhenScrolling: true },
-      }}
-    />
-  );
+  const header = <Stack.Screen options={{ headerShown: false }} />;
 
-  if (isGuest) {
+  if (isGuest || unreachable) {
     return (
       <View style={{ flex: 1 }}>
-        <Backdrop />
         {header}
-        <EmptyState icon="lock-closed-outline" title={t('library.guestTitle')} body={t('library.guestBody')} />
-      </View>
-    );
-  }
-
-  if (unreachable) {
-    return (
-      <View style={{ flex: 1 }}>
-        <Backdrop />
-        {header}
-        <OfflineState />
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1 }}>
+          <TabHeader title={t('tabs.library')} />
+          {unreachable ? (
+            <OfflineState />
+          ) : (
+            <EmptyState icon="lock-closed-outline" title={t('library.guestTitle')} body={t('library.guestBody')} />
+          )}
+        </ScrollView>
+        <TopFade />
       </View>
     );
   }
@@ -116,7 +106,6 @@ export default function Library() {
   const grid = kind !== 'artists';
   return (
     <View style={{ flex: 1 }}>
-      <Backdrop />
       {header}
       <FlatList
         key={kind}
@@ -131,7 +120,14 @@ export default function Library() {
         onEndReached={() => {
           if (!loading && kind !== 'playlists' && items.length < total) load('more');
         }}
-        ListHeaderComponent={<Segments value={kind} onChange={(k) => { setItems([]); setKind(k); }} />}
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={
+          <>
+            <TabHeader title={t('tabs.library')} />
+            <FilterField value={query} onChange={setQuery} placeholder={t('library.filter')} />
+            <Segments value={kind} onChange={(k) => { setItems([]); setKind(k); }} />
+          </>
+        }
         ListEmptyComponent={
           loading ? (
             <View style={{ height: 300 }}><Loading /></View>
@@ -160,6 +156,26 @@ export default function Library() {
           )
         }
       />
+      <TopFade />
+    </View>
+  );
+}
+
+function FilterField({ value, onChange, placeholder }: { value: string; onChange: (text: string) => void; placeholder: string }) {
+  return (
+    <View style={styles.filter}>
+      <Ionicons name="search" size={17} color={colors.textTertiary} />
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        autoCapitalize="none"
+        autoCorrect={false}
+        clearButtonMode="while-editing"
+        returnKeyType="search"
+        style={styles.filterInput}
+      />
     </View>
   );
 }
@@ -187,6 +203,17 @@ function Segments({ value, onChange }: { value: Kind; onChange: (kind: Kind) => 
 }
 
 const styles = StyleSheet.create({
+  filter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  filterInput: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: 9 },
   segments: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 },
   segment: {
     paddingHorizontal: 16,

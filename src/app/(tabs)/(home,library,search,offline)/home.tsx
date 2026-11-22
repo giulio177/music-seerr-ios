@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
 import { Cover } from '@/components/Cover';
-import { Backdrop, Loading, OfflineState } from '@/components/ui';
+import { TabHeader, TopFade } from '@/components/TabHeader';
+import { Loading, OfflineState } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { usePlayer } from '@/lib/player';
 import { useRequests } from '@/lib/requests';
@@ -57,14 +58,17 @@ export default function Home() {
     return tracks;
   }, [plays.data]);
 
-  const header = <Stack.Screen options={{ title: t('tabs.home') }} />;
+  const header = <Stack.Screen options={{ headerShown: false }} />;
 
   if (unreachable) {
     return (
       <View style={{ flex: 1 }}>
-        <Backdrop />
         {header}
-        <OfflineState />
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1 }}>
+          <TabHeader title={t('tabs.home')} />
+          <OfflineState />
+        </ScrollView>
+        <TopFade />
       </View>
     );
   }
@@ -76,13 +80,13 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Backdrop />
       {header}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: 140 }}
         refreshControl={<RefreshControl refreshing={plays.refreshing || picks.refreshing} onRefresh={refresh} tintColor={colors.textSecondary} />}
       >
+        <TabHeader title={t('tabs.home')} />
         {loading && !recent.length && !picks.data ? (
           <View style={{ height: 300 }}>
             <Loading />
@@ -141,6 +145,7 @@ export default function Home() {
           <Text style={styles.empty}>{t('home.empty')}</Text>
         ) : null}
       </ScrollView>
+      <TopFade />
     </View>
   );
 }

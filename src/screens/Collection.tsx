@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
 import { TrackRow } from '@/components/TrackRow';
-import { AccentButton, Backdrop, ErrorState, Loading } from '@/components/ui';
+import { AccentButton, ErrorState, Loading } from '@/components/ui';
 import { offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
@@ -53,7 +53,6 @@ export function CollectionScreen({ kind, id }: { kind: Kind; id: string }) {
   if (loading) {
     return (
       <View style={{ flex: 1 }}>
-        <Backdrop />
         <Stack.Screen options={{ title: '', headerLargeTitle: false }} />
         <Loading />
       </View>
@@ -62,7 +61,6 @@ export function CollectionScreen({ kind, id }: { kind: Kind; id: string }) {
   if (error && !fallback) {
     return (
       <View style={{ flex: 1 }}>
-        <Backdrop />
         <Stack.Screen options={{ title: '', headerLargeTitle: false }} />
         <ErrorState error={error} onRetry={reload} />
       </View>
@@ -77,7 +75,6 @@ export function CollectionScreen({ kind, id }: { kind: Kind; id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Backdrop />
       <Stack.Screen options={{ title: info?.name ?? '', headerLargeTitle: false }} />
       <FlatList
         data={tracks}

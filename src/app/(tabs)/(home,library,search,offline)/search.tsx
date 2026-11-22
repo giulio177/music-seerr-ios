@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
 import { TrackRow } from '@/components/TrackRow';
-import { Backdrop, EmptyState, ErrorState, OfflineState } from '@/components/ui';
+import { EmptyState, ErrorState, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePlayer } from '@/lib/player';
@@ -66,7 +66,6 @@ export default function Search() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Backdrop />
       <Stack.Screen
         options={{
           title: t('tabs.search'),
