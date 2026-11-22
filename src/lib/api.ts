@@ -1,4 +1,13 @@
-import { useAuth } from './auth';
+type Session = { serverUrl: string; token: string | null };
+
+// The auth store registers itself here, so this module does not import it (no require cycle).
+let currentSession: () => Session = () => ({ serverUrl: '', token: null });
+let onUnauthorized: () => void = () => undefined;
+
+export function bindSession(get: () => Session, unauthorized: () => void) {
+  currentSession = get;
+  onUnauthorized = unauthorized;
+}
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: string) {
@@ -19,12 +28,12 @@ export function normalizeServerUrl(input: string) {
 }
 
 /** Absolute URL for a backend path (paths from the API start with `/api/`). */
-export function absoluteUrl(path: string, server = useAuth.getState().serverUrl) {
+export function absoluteUrl(path: string, server = currentSession().serverUrl) {
   if (/^https?:\/\//i.test(path)) return path;
   return `${server}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-export function authHeaders(token = useAuth.getState().token): Record<string, string> {
+export function authHeaders(token = currentSession().token): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -39,8 +48,8 @@ type RequestOptions = {
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, timeoutMs = 15000, query } = options;
-  const server = options.server ?? useAuth.getState().serverUrl;
-  const token = options.token === undefined ? useAuth.getState().token : options.token;
+  const server = options.server ?? currentSession().serverUrl;
+  const token = options.token === undefined ? currentSession().token : options.token;
   let url = absoluteUrl(path, server);
   if (query) {
     const params = Object.entries(query)
@@ -79,9 +88,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
   if (!response.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : `HTTP ${response.status}`;
-    if (response.status === 401 && token && token === useAuth.getState().token) {
-      useAuth.getState().expire();
-    }
+    if (response.status === 401 && token && token === currentSession().token) onUnauthorized();
     throw new ApiError(response.status, detail);
   }
   return data as T;

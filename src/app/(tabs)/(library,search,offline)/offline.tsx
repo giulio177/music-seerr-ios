@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { TrackRow } from '@/components/TrackRow';
@@ -14,6 +14,14 @@ export default function Offline() {
   const { t } = useTranslation();
   const saved = useOffline((s) => s.tracks);
   const unreachable = useAuth((s) => s.unreachable);
+  const downloadsOnly = useAuth((s) => s.status === 'offline');
+  const [retrying, setRetrying] = useState(false);
+
+  const retry = async () => {
+    setRetrying(true);
+    await useAuth.getState().verify();
+    setRetrying(false);
+  };
 
   const tracks = useMemo(
     () =>
@@ -35,7 +43,17 @@ export default function Offline() {
         contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
         ListHeaderComponent={
           <View style={styles.header}>
-            {unreachable ? <Text style={styles.banner}>{t('settings.offlineBanner')}</Text> : null}
+            {unreachable || downloadsOnly ? (
+              <View style={styles.banner}>
+                <Text style={styles.bannerText}>{t(unreachable ? 'settings.offlineBanner' : 'offline.downloadsOnly')}</Text>
+                <AccentButton
+                  label={t(unreachable ? 'common.retry' : 'offline.signIn')}
+                  variant="glass"
+                  loading={retrying}
+                  onPress={unreachable ? retry : () => useAuth.getState().leaveDownloadsOnly()}
+                />
+              </View>
+            ) : null}
             {tracks.length ? (
               <>
                 <Text style={styles.meta}>
@@ -66,12 +84,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
   meta: { color: colors.textSecondary, fontSize: 14 },
   actions: { flexDirection: 'row', gap: 12 },
-  banner: {
-    color: colors.warning,
-    fontSize: 14,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    padding: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
+  banner: { backgroundColor: 'rgba(251, 191, 36, 0.1)', padding: 12, borderRadius: 12, gap: 10 },
+  bannerText: { color: colors.warning, fontSize: 14, lineHeight: 19 },
 });

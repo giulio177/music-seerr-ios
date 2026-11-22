@@ -122,15 +122,28 @@ function getPlaylist() {
 
 const artDir = new Directory(Paths.cache, 'art');
 
-/** The lock screen loads artwork without auth headers, so server covers are cached to disk first. */
+/** Songs whose server artwork is missing; asked once per launch. */
+const noArtwork = new Set<string>();
+
+/**
+ * The lock screen loads artwork without auth headers, so server covers are cached to disk first.
+ * Fetched with `fetch` (the file download API dropped the Authorization header, which the server answered with 401).
+ */
 async function artworkFor(item: QueueItem): Promise<string | undefined> {
   if (item.coverLocal) return item.coverLocal;
-  if (!item.cover) return undefined;
+  if (!item.cover || noArtwork.has(item.id)) return undefined;
   if (item.kind === 'preview') return item.cover;
   try {
     if (!artDir.exists) artDir.create({ intermediates: true });
     const file = new File(artDir, `${item.id}.jpg`);
-    if (!file.exists) await File.downloadFileAsync(item.cover, file, { headers: authHeaders() });
+    if (!file.exists) {
+      const res = await fetch(item.cover, { headers: authHeaders(), credentials: 'omit' });
+      if (!res.ok) {
+        if (res.status === 404) noArtwork.add(item.id);
+        return undefined;
+      }
+      file.write(new Uint8Array(await res.arrayBuffer()));
+    }
     return file.uri;
   } catch {
     return undefined;

@@ -13,7 +13,6 @@ export default function SharedStack() {
     <Stack
       screenOptions={{
         headerTransparent: true,
-        headerBlurEffect: 'systemChromeMaterialDark',
         headerLargeTitle: true,
         headerLargeTitleShadowVisible: false,
         headerShadowVisible: false,

@@ -25,7 +25,8 @@
     "errorServer": "Enter the server address.",
     "errorUnreachable": "The server cannot be reached. Check the address and that this iPhone is on the same network.",
     "errorCredentials": "Wrong username or password.",
-    "errorServerTooOld": "This server is too old for the app. Update Music Seerr on the server."
+    "errorServerTooOld": "This server is too old for the app. Update Music Seerr on the server.",
+    "downloadsOnly": "Play downloads only"
   },
   "library": {
     "playlists": "Playlists",
@@ -77,7 +78,9 @@
     "title": "Downloads",
     "empty": "Downloaded songs play without the server. Use the download button on an album, playlist, or song.",
     "playAll": "Play all",
-    "size": "{{size}} on this iPhone"
+    "size": "{{size}} on this iPhone",
+    "downloadsOnly": "Offline mode: only the songs downloaded on this iPhone.",
+    "signIn": "Sign in"
   },
   "player": {
     "nothing": "Nothing playing",

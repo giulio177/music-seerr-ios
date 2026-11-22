@@ -15,12 +15,15 @@ export function Cover({
   local,
   size,
   round,
+  shadow,
   style,
 }: {
   path?: string | null;
   local?: string | null;
   size: number;
   round?: boolean;
+  /** Drop shadow, drawn by a solid outer view so iOS can compute it from the rounded shape. */
+  shadow?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const [failed, setFailed] = useState(false);
@@ -31,8 +34,9 @@ export function Cover({
     : path
       ? { uri: absoluteUrl(path), headers: isServer ? authHeaders() : undefined, cacheKey: isServer ? path : undefined }
       : null;
-  return (
-    <View style={[{ width: size, height: size, borderRadius, overflow: 'hidden' }, style]}>
+  const box = { width: size, height: size, borderRadius };
+  const art = (
+    <View style={[box, { overflow: 'hidden' }, shadow ? null : style]}>
       <LinearGradient colors={['#2b2036', '#1b1c27', '#161720']} style={[StyleSheet.absoluteFill, styles.center]}>
         <Ionicons name={round ? 'person' : 'musical-note'} size={size * 0.36} color="rgba(255,255,255,0.28)" />
       </LinearGradient>
@@ -49,6 +53,16 @@ export function Cover({
       ) : null}
     </View>
   );
+  return shadow ? <View style={[box, styles.shadow, style]}>{art}</View> : art;
 }
 
-const styles = StyleSheet.create({ center: { alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center' },
+  shadow: {
+    backgroundColor: '#161720',
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+  },
+});

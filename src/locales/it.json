@@ -25,7 +25,8 @@
     "errorServer": "Inserisci l'indirizzo del server.",
     "errorUnreachable": "Il server non è raggiungibile. Controlla l'indirizzo e che l'iPhone sia sulla stessa rete.",
     "errorCredentials": "Nome utente o password errati.",
-    "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Music Seerr sul server."
+    "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Music Seerr sul server.",
+    "downloadsOnly": "Ascolta solo i download"
   },
   "library": {
     "playlists": "Playlist",
@@ -77,7 +78,9 @@
     "title": "Scaricati",
     "empty": "I brani scaricati si ascoltano anche senza server. Usa il pulsante di download su un album, una playlist o un brano.",
     "playAll": "Riproduci tutto",
-    "size": "{{size}} su questo iPhone"
+    "size": "{{size}} su questo iPhone",
+    "downloadsOnly": "Modalità offline: solo i brani scaricati su questo iPhone.",
+    "signIn": "Accedi"
   },
   "player": {
     "nothing": "Nessuna riproduzione",

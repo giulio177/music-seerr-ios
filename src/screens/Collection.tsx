@@ -87,7 +87,7 @@ export function CollectionScreen({ kind, id }: { kind: Kind; id: string }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.textSecondary} />}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Cover path={coverPath} size={230} round={kind === 'artist'} style={styles.cover} />
+            <Cover path={coverPath} size={230} round={kind === 'artist'} shadow />
             <Text style={styles.title}>{info?.name}</Text>
             {kind === 'album' && info?.artist_id ? (
               <Pressable onPress={() => router.push(`/artist/${info.artist_id}`)}>
@@ -124,7 +124,6 @@ export function CollectionScreen({ kind, id }: { kind: Kind; id: string }) {
 
 const styles = StyleSheet.create({
   header: { alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
-  cover: { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   title: { color: colors.text, fontSize: 24, fontWeight: '800', textAlign: 'center', marginTop: 18 },
   subtitle: { color: colors.textSecondary, fontSize: 16, marginTop: 4, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 12, alignSelf: 'stretch', marginTop: 18 },

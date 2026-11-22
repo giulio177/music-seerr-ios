@@ -73,8 +73,8 @@ function CoverPanel({ item }: { item: QueueItem }) {
   const size = width - 56;
   return (
     <View style={styles.coverWrap}>
-      <View style={[styles.coverShadow, { transform: [{ scale: playing ? 1 : 0.86 }] }]}>
-        <Cover path={item.coverLocal ? null : item.cover} local={item.coverLocal} size={size} />
+      <View style={{ transform: [{ scale: playing ? 1 : 0.86 }] }}>
+        <Cover path={item.coverLocal ? null : item.cover} local={item.coverLocal} size={size} shadow />
       </View>
     </View>
   );
@@ -252,7 +252,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, paddingHorizontal: 24 },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 10, marginBottom: 8 },
   coverWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  coverShadow: { shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 30, shadowOffset: { width: 0, height: 18 } },
   panel: { flex: 1 },
   info: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
   title: { color: colors.text, fontSize: 22, fontWeight: '700' },

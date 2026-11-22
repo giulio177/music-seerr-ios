@@ -6,12 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccentButton, Backdrop, Glass } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useOffline } from '@/lib/offline';
 import { colors, useAccent } from '@/lib/theme';
 
 export default function Login() {
   const { t } = useTranslation();
   const { accent } = useAccent();
   const savedServer = useAuth((s) => s.serverUrl);
+  const hasDownloads = useOffline((s) => Object.keys(s.tracks).length > 0);
   const [server, setServer] = useState(savedServer);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -52,7 +54,9 @@ export default function Login() {
         <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.brand}>
-              <Image source={require('../../assets/splash-icon.png')} style={[styles.logo, { shadowColor: accent }]} />
+              <View style={[styles.logoGlow, { shadowColor: accent }]}>
+                <Image source={require('../../assets/splash-icon.png')} style={styles.logo} />
+              </View>
               <Text style={styles.title}>Music Seerr</Text>
               <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
             </View>
@@ -104,6 +108,15 @@ export default function Login() {
                 loading={busy === 'guest'}
                 disabled={!!busy}
               />
+              {hasDownloads ? (
+                <AccentButton
+                  label={t('login.downloadsOnly')}
+                  icon="arrow-down-circle"
+                  variant="glass"
+                  onPress={() => useAuth.getState().openDownloadsOnly()}
+                  disabled={!!busy}
+                />
+              ) : null}
             </Glass>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -124,7 +137,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 20, gap: 28 },
   brand: { alignItems: 'center', gap: 8 },
-  logo: { width: 112, height: 112, shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 0 } },
+  // The glow sits on a solid round view: iOS cannot compute a shadow from transparent image pixels efficiently.
+  logoGlow: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: colors.bg,
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  logo: { width: 112, height: 112 },
   title: { color: colors.text, fontSize: 30, fontWeight: '800', marginTop: 8 },
   subtitle: { color: colors.textSecondary, fontSize: 15 },
   card: { padding: 18, gap: 14 },

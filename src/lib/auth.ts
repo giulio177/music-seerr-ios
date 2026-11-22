@@ -1,20 +1,25 @@
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-import { api, ApiError, normalizeServerUrl } from './api';
+import { api, ApiError, bindSession, normalizeServerUrl } from './api';
 import { useAccent } from './theme';
 import type { User } from './types';
 
 const KEYS = { server: 'server_url', token: 'session_token', user: 'session_user' };
 
 type AuthState = {
-  status: 'loading' | 'signedOut' | 'signedIn';
+  /** `offline`: no session, the app shows the downloaded songs only. */
+  status: 'loading' | 'signedOut' | 'signedIn' | 'offline';
   serverUrl: string;
   token: string | null;
   user: User | null;
   /** The last check could not reach the server; the app runs from offline downloads. */
   unreachable: boolean;
   load: () => Promise<void>;
-  verify: () => Promise<void>;
+  verify: (timeoutMs?: number) => Promise<void>;
+  /** Opens the downloads without signing in. */
+  openDownloadsOnly: () => void;
+  /** Leaves the downloads-only mode for the sign-in screen. */
+  leaveDownloadsOnly: () => void;
   login: (server: string, username: string, password: string) => Promise<void>;
   continueAsGuest: (server: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -64,15 +69,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     } catch {
       user = null;
     }
-    // Open the app at once with the saved session (offline downloads work without the server),
-    // then confirm it in the background.
-    set({ status: 'signedIn', serverUrl, token, user });
-    get().verify();
+    // Check the saved session briefly while the splash screen is up, so an unreachable server
+    // opens straight on the downloads; the session stays valid either way.
+    set({ serverUrl, token, user });
+    await get().verify(3500);
+    if (get().status === 'loading') set({ status: 'signedIn' });
   },
 
-  verify: async () => {
+  verify: async (timeoutMs = 6000) => {
     try {
-      const session = await api<{ authenticated: boolean; user: User | null }>('/api/auth/session', { timeoutMs: 6000 });
+      const session = await api<{ authenticated: boolean; user: User | null }>('/api/auth/session', { timeoutMs });
       if (!session.authenticated || !session.user) {
         get().expire();
         return;
@@ -84,6 +90,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       if (error instanceof ApiError && error.offline) set({ unreachable: true });
     }
   },
+
+  openDownloadsOnly: () => set({ status: 'offline', unreachable: false }),
+
+  leaveDownloadsOnly: () => set({ status: 'signedOut' }),
 
   login: async (server, username, password) => {
     const serverUrl = normalizeServerUrl(server);
@@ -122,3 +132,8 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ status: 'signedOut', token: null, user: null, unreachable: false });
   },
 }));
+
+bindSession(
+  () => useAuth.getState(),
+  () => useAuth.getState().expire(),
+);
