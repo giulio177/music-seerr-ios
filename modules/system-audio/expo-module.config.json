@@ -1,6 +1,14 @@
 {
-  "platforms": ["apple"],
+  "platforms": [
+    "apple"
+  ],
   "apple": {
-    "modules": ["SystemVolumeModule", "RoutePickerModule"]
+    "modules": [
+      "SystemVolumeModule",
+      "RoutePickerModule",
+      "ScrubberModule",
+      "MenuButtonModule",
+      "SwipeLockModule"
+    ]
   }
 }

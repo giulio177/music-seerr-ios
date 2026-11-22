@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActionSheetIOS, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from '@/lib/format';
 import { albumCoverPath } from '@/lib/api';
 import { localCoverUri, useOffline } from '@/lib/offline';
@@ -10,6 +10,7 @@ import { usePlayer } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
 import { Cover } from './Cover';
+import { Menu, showActionSheet, type MenuItem } from './Menu';
 import { toast } from './Toast';
 
 /** Download state badge: progress ring while downloading, check mark when saved. */
@@ -24,42 +25,50 @@ export function DownloadBadge({ id }: { id: string }) {
   return <Text style={[styles.progress, { color: accent }]}>{pct}%</Text>;
 }
 
-export function openTrackMenu(track: LibraryTrack, t: (key: string) => string) {
+/** Menu items of a library song (rows and the full player share them). */
+export function trackMenuItems(
+  track: LibraryTrack,
+  t: (key: string) => string,
+  options: { queue?: boolean; navigate?: (path: string) => void } = {},
+): MenuItem[] {
+  const { queue = true, navigate = (path: string) => router.push(path as never) } = options;
   const offline = useOffline.getState();
   const saved = !!offline.tracks[track.id];
-  const actions: { label: string; run: () => void; destructive?: boolean }[] = [
-    {
-      label: t('track.playNext'),
-      run: () => {
-        usePlayer.getState().playNext(track);
-        toast(t('track.playingNext'));
+  const items: MenuItem[] = [];
+  if (queue) {
+    items.push(
+      {
+        id: 'playNext',
+        title: t('track.playNext'),
+        systemImage: 'text.line.first.and.arrowtriangle.forward',
+        run: () => {
+          usePlayer.getState().playNext(track);
+          toast(t('track.playingNext'));
+        },
       },
-    },
-    {
-      label: t('track.addToQueue'),
-      run: () => {
-        usePlayer.getState().addToQueue(track);
-        toast(t('track.addedToQueue'));
+      {
+        id: 'addToQueue',
+        title: t('track.addToQueue'),
+        systemImage: 'text.line.last.and.arrowtriangle.forward',
+        run: () => {
+          usePlayer.getState().addToQueue(track);
+          toast(t('track.addedToQueue'));
+        },
       },
-    },
+    );
+  }
+  if (track.album_id) {
+    items.push({ id: 'album', title: t('track.goToAlbum'), systemImage: 'square.stack', group: 1, run: () => navigate(`/album/${track.album_id}`) });
+  }
+  if (track.artist_id) {
+    items.push({ id: 'artist', title: t('track.goToArtist'), systemImage: 'music.microphone', group: 1, run: () => navigate(`/artist/${track.artist_id}`) });
+  }
+  items.push(
     saved
-      ? { label: t('track.removeDownload'), run: () => offline.remove(track.id), destructive: true }
-      : { label: t('track.download'), run: () => offline.download([track]) },
-  ];
-  if (track.album_id) actions.push({ label: t('track.goToAlbum'), run: () => router.push(`/album/${track.album_id}`) });
-  if (track.artist_id) actions.push({ label: t('track.goToArtist'), run: () => router.push(`/artist/${track.artist_id}`) });
-  const options = [...actions.map((a) => a.label), t('common.cancel')];
-  ActionSheetIOS.showActionSheetWithOptions(
-    {
-      title: track.title,
-      message: track.artist,
-      options,
-      cancelButtonIndex: options.length - 1,
-      destructiveButtonIndex: actions.findIndex((a) => a.destructive),
-      userInterfaceStyle: 'dark',
-    },
-    (index) => actions[index]?.run(),
+      ? { id: 'remove', title: t('track.removeDownload'), systemImage: 'xmark.circle', destructive: true, group: 2, run: () => offline.remove(track.id) }
+      : { id: 'download', title: t('track.download'), systemImage: 'arrow.down.circle', group: 2, run: () => offline.download([track]) },
   );
+  return items;
 }
 
 type Props = {
@@ -77,7 +86,7 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: P
   return (
     <Pressable
       onPress={onPress}
-      onLongPress={() => openTrackMenu(track, t)}
+      onLongPress={() => showActionSheet(trackMenuItems(track, t), t('common.cancel'), track.title, track.artist)}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       {showNumber ? (
@@ -98,9 +107,9 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: P
         </View>
       </View>
       <Text style={styles.duration}>{formatTime(track.duration_sec)}</Text>
-      <Pressable hitSlop={12} onPress={() => openTrackMenu(track, t)} accessibilityLabel="More">
+      <Menu items={trackMenuItems(track, t)} cancelLabel={t('common.cancel')} accessibilityLabel={t('common.more')} style={styles.more}>
         <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
-      </Pressable>
+      </Menu>
     </Pressable>
   );
 });
@@ -114,5 +123,6 @@ const styles = StyleSheet.create({
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   artist: { color: colors.textSecondary, fontSize: 14, flexShrink: 1 },
   duration: { color: colors.textTertiary, fontSize: 13, fontVariant: ['tabular-nums'] },
+  more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   progress: { fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
 });

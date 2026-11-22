@@ -6,6 +6,9 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { absoluteUrl, authHeaders, serverPath } from '@/lib/api';
 import { radius } from '@/lib/theme';
 
+/** Artwork URLs that failed this launch (songs without a cover): not requested again on every mount. */
+const missing = new Set<string>();
+
 /**
  * Artwork. `path` is a backend path (`/api/jellyfin/image/...`) or an absolute URL; server images load with
  * the session token. `local` is a downloaded file and wins when present; `fallback` (usually the album
@@ -39,7 +42,7 @@ export function Cover({
       const server = serverPath(uri);
       return server ? { uri: absoluteUrl(server), headers: authHeaders(), cacheKey: server } : { uri };
     })
-    .find((candidate) => !failed.includes(candidate.uri));
+    .find((candidate) => !failed.includes(candidate.uri) && !missing.has(candidate.uri));
   const box = { width: size, height: size, borderRadius };
   const art = (
     <View style={[box, { overflow: 'hidden' }, shadow ? null : style]}>
@@ -54,7 +57,10 @@ export function Cover({
           transition={150}
           cachePolicy="disk"
           recyclingKey={source.uri}
-          onError={() => setFailed((prev) => [...prev, source.uri])}
+          onError={() => {
+            if (!source.uri.startsWith('file:')) missing.add(source.uri);
+            setFailed((prev) => [...prev, source.uri]);
+          }}
         />
       ) : null}
     </View>

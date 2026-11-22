@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Animated,
   FlatList,
@@ -16,13 +15,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Cover } from '@/components/Cover';
+import { Menu } from '@/components/Menu';
+import { SwipeArea } from '@/components/SwipeArea';
+import { trackMenuItems } from '@/components/TrackRow';
 import { Symbol } from '@/components/Symbol';
 import { Backdrop } from '@/components/ui';
 import { formatTime } from '@/lib/format';
 import { parseLrc, useLyrics } from '@/lib/lyrics';
+import { useOffline } from '@/lib/offline';
 import { usePlayer, useCurrentItem, type QueueItem } from '@/lib/player';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
-import { RoutePickerView, SystemVolumeView } from '../../modules/system-audio';
+import { RoutePickerView, ScrubberView, SystemVolumeView } from '../../modules/system-audio';
 
 type Panel = 'cover' | 'lyrics' | 'queue';
 
@@ -70,17 +73,6 @@ function goTo(path: string) {
   setTimeout(() => router.push(path as never), 250);
 }
 
-function openMenu(item: QueueItem, t: (key: string) => string) {
-  const actions: { label: string; run: () => void }[] = [];
-  if (item.albumId) actions.push({ label: t('player.goToAlbum'), run: () => goTo(`/album/${item.albumId}`) });
-  if (item.artistId) actions.push({ label: t('player.goToArtist'), run: () => goTo(`/artist/${item.artistId}`) });
-  if (!actions.length) return;
-  ActionSheetIOS.showActionSheetWithOptions(
-    { options: [...actions.map((a) => a.label), t('common.cancel')], cancelButtonIndex: actions.length, title: item.title, message: item.artist },
-    (index) => actions[index]?.run(),
-  );
-}
-
 /** Artwork; swipe left for the next song, right for the previous one. */
 function CoverPanel({ item }: { item: QueueItem }) {
   const { width } = useWindowDimensions();
@@ -98,6 +90,9 @@ function CoverPanel({ item }: { item: QueueItem }) {
       PanResponder.create({
         // Horizontal drags only, so the vertical drag still closes the sheet.
         onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        // Once horizontal, keep the swipe even if the finger drifts up or down.
+        onPanResponderTerminationRequest: () => false,
         onPanResponderMove: (_, g) => x.setValue(g.dx),
         onPanResponderRelease: (_, g) => {
           const { queue, index, repeat } = usePlayer.getState();
@@ -124,11 +119,11 @@ function CoverPanel({ item }: { item: QueueItem }) {
   );
 
   return (
-    <View style={styles.coverWrap} {...responder.panHandlers}>
+    <SwipeArea style={styles.coverWrap} {...responder.panHandlers}>
       <Animated.View style={{ transform: [{ translateX: x }, { scale }] }}>
         <Cover path={item.cover} local={item.coverLocal} fallback={item.coverFallback} size={size} shadow />
       </Animated.View>
-    </View>
+    </SwipeArea>
   );
 }
 
@@ -155,11 +150,14 @@ function TitleRow({ item }: { item: QueueItem }) {
 
 function MoreButton({ item }: { item: QueueItem }) {
   const { t } = useTranslation();
-  if (!item.albumId && !item.artistId) return null;
+  // Rebuilt on open by the native menu; the download state is read when the item renders.
+  const saved = useOffline((s) => !!s.tracks[item.id]);
+  if (item.kind !== 'library' || !item.library) return null;
+  const items = trackMenuItems(item.library, t, { queue: false, navigate: goTo });
   return (
-    <Pressable onPress={() => openMenu(item, t)} hitSlop={10} style={styles.more} accessibilityLabel={t('common.more')}>
+    <Menu key={String(saved)} items={items} cancelLabel={t('common.cancel')} title={item.title} accessibilityLabel={t('common.more')} style={styles.more}>
       <Symbol name="ellipsis" fallback="ellipsis-horizontal" size={18} color={colors.text} />
-    </Pressable>
+    </Menu>
   );
 }
 
@@ -336,8 +334,39 @@ function setTrackWidth(width: number) {
   drag.width = Math.max(1, width);
 }
 
-/** Apple Music style scrubber: a thin bar without knob that thickens while dragged; drags are relative. */
+/**
+ * Apple Music style scrubber: thin, no knob, thickens while dragged, drags are relative and keep going wherever
+ * the finger moves; the song seeks on release. Native (`ScrubberView`) when the build has it.
+ */
 function Scrubber() {
+  const position = usePlayer((s) => s.position);
+  const duration = usePlayer((s) => s.duration);
+  const [dragging, setDragging] = useState<number | null>(null);
+  if (!ScrubberView) return <JsScrubber />;
+  const shown = Math.min(dragging ?? position, duration || 0);
+  return (
+    <View style={styles.scrubber}>
+      <ScrubberView
+        style={styles.trackTouch}
+        value={position}
+        maximum={duration}
+        onScrubStart={() => setDragging(usePlayer.getState().position)}
+        onScrubChange={(e) => setDragging(e.nativeEvent.value)}
+        onScrubEnd={(e) => {
+          usePlayer.getState().seek(e.nativeEvent.value);
+          setTimeout(() => setDragging(null), 300);
+        }}
+      />
+      <View style={styles.times}>
+        <Text style={[styles.time, dragging !== null && { color: colors.textSecondary }]}>{formatTime(shown)}</Text>
+        <Text style={[styles.time, dragging !== null && { color: colors.textSecondary }]}>-{formatTime(Math.max(0, duration - shown))}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Fallback scrubber for builds without the native one. */
+function JsScrubber() {
   const position = usePlayer((s) => s.position);
   const duration = usePlayer((s) => s.duration);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -425,7 +454,7 @@ function VolumeRow() {
   return (
     <View style={styles.volume}>
       <Symbol name="speaker.fill" fallback="volume-low" size={13} color={colors.textTertiary} />
-      <SystemVolumeView style={{ flex: 1, height: 34 }} minimumTrackColor="rgba(255,255,255,0.8)" maximumTrackColor="rgba(255,255,255,0.22)" />
+      <SystemVolumeView style={{ flex: 1, height: 34 }} />
       <Symbol name="speaker.wave.3.fill" fallback="volume-high" size={15} color={colors.textTertiary} />
     </View>
   );

@@ -1,15 +1,31 @@
 import { requireNativeView, requireOptionalNativeModule } from 'expo';
 import type { ComponentType } from 'react';
-import type { ColorValue, ViewProps } from 'react-native';
+import type { ColorValue, NativeSyntheticEvent, ViewProps } from 'react-native';
 
-export type SystemVolumeProps = ViewProps & { minimumTrackColor?: ColorValue; maximumTrackColor?: ColorValue };
 export type RoutePickerProps = ViewProps & { tint?: ColorValue; activeTint?: ColorValue };
 
-// Both views are null in a build made before this module existed, so callers can hide them.
-export const SystemVolumeView: ComponentType<SystemVolumeProps> | null = requireOptionalNativeModule('SystemVolume')
-  ? requireNativeView('SystemVolume')
-  : null;
+export type ScrubberProps = ViewProps & {
+  value: number;
+  maximum: number;
+  onScrubStart?: () => void;
+  onScrubChange?: (event: NativeSyntheticEvent<{ value: number }>) => void;
+  onScrubEnd?: (event: NativeSyntheticEvent<{ value: number }>) => void;
+};
 
-export const RoutePickerView: ComponentType<RoutePickerProps> | null = requireOptionalNativeModule('RoutePicker')
-  ? requireNativeView('RoutePicker')
-  : null;
+export type MenuAction = { id: string; title: string; systemImage?: string; destructive?: boolean; group?: number };
+export type MenuButtonProps = ViewProps & {
+  actions: MenuAction[];
+  title?: string;
+  onSelect: (event: NativeSyntheticEvent<{ id: string }>) => void;
+};
+
+/** Null in a build made before the native view existed, so callers can fall back. */
+function optionalView<P>(name: string): ComponentType<P> | null {
+  return requireOptionalNativeModule(name) ? requireNativeView(name) : null;
+}
+
+export const SystemVolumeView = optionalView<ViewProps>('SystemVolume');
+export const RoutePickerView = optionalView<RoutePickerProps>('RoutePicker');
+export const ScrubberView = optionalView<ScrubberProps>('Scrubber');
+export const MenuButtonView = optionalView<MenuButtonProps>('MenuButton');
+export const SwipeLockView = optionalView<ViewProps>('SwipeLock');
