@@ -2,7 +2,7 @@ import { createAudioPlaylist, setAudioModeAsync, type AudioPlaylist, type AudioS
 import { Directory, File, Paths } from 'expo-file-system';
 import { create } from 'zustand';
 import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
-import { localAudioUri, localCoverUri, saveArtwork, streamPath, useOffline } from './offline';
+import { localAudioUri, localCoverUri, saveArtwork, streamPath, supportDir, useOffline } from './offline';
 import type { CatalogTrack, LibraryTrack } from './types';
 
 export type QueueItem = {
@@ -51,10 +51,16 @@ type PlayerState = {
   cycleRepeat: () => void;
   toggleShuffle: () => void;
   stop: () => void;
+  /** Brings back the last session's queue, paused, so the mini player shows the last song (like Apple Music). */
+  restore: () => void;
 };
 
 let playlist: AudioPlaylist | null = null;
 let lockScreenActive = false;
+/** Position of a restored song, applied on the first play (the native player is not loaded before). */
+let pendingSeek: number | null = null;
+/** A restored queue has not played yet: the first play starts the lock screen and the history entry. */
+let restoredIdle = false;
 let keySeq = 0;
 
 function nextKey() {
@@ -108,12 +114,15 @@ function getPlaylist() {
       usePlayer.setState({
         playing: status.playing,
         buffering: status.isBuffering,
-        position: status.currentTime,
+        // A restored song reports 0 until it plays; keep showing where it stopped.
+        position: pendingSeek ?? status.currentTime,
         duration: status.duration || usePlayer.getState().queue[status.currentIndex]?.duration || 0,
         index: status.currentIndex,
       });
     });
     playlist.addListener('trackChanged', ({ currentIndex }) => {
+      pendingSeek = null;
+      restoredIdle = false;
       usePlayer.setState({ index: currentIndex, position: 0 });
       onTrackStart();
     });
@@ -347,8 +356,20 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (pl.playing) {
       pl.pause();
       tracker.flush();
+      saveSession();
     } else {
-      ensureAudioMode().then(() => pl.play());
+      ensureAudioMode().then(() => {
+        pl.play();
+        if (pendingSeek !== null) {
+          // First play of a restored session: jump to where it stopped.
+          pl.seekTo(pendingSeek);
+          pendingSeek = null;
+        }
+        if (restoredIdle) {
+          restoredIdle = false;
+          onTrackStart();
+        }
+      });
     }
   },
 
@@ -361,6 +382,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   seek: (seconds) => {
+    // Not loaded yet (restored, never played): remember the new spot for the first play.
+    if (pendingSeek !== null) {
+      pendingSeek = seconds;
+      set({ position: seconds });
+      return;
+    }
     tracker.lastTime = seconds;
     getPlaylist().seekTo(seconds);
   },
@@ -387,7 +414,33 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       playlist.clearLockScreenControls();
       lockScreenActive = false;
     }
+    pendingSeek = null;
+    restoredIdle = false;
     set({ queue: [], index: 0, playing: false, position: 0, duration: 0 });
+  },
+
+  restore: () => {
+    if (get().queue.length) return;
+    const saved = readSession();
+    if (!saved) return;
+    let order = 0;
+    const items = saved.tracks.map((track) => fromLibrary(track, order++));
+    const index = Math.min(saved.index, items.length - 1);
+    const pl = getPlaylist();
+    for (const item of items) pl.add(sourceFor(item));
+    pl.skipTo(index);
+    pl.loop = saved.repeat;
+    pendingSeek = saved.position > 0 ? saved.position : null;
+    restoredIdle = true;
+    set({
+      queue: items,
+      index,
+      position: saved.position,
+      duration: items[index]?.duration ?? 0,
+      repeat: saved.repeat,
+      shuffle: saved.shuffle,
+      playing: false,
+    });
   },
 }));
 
@@ -400,6 +453,62 @@ useOffline.subscribe((state, prev) => {
     if (item.kind !== 'library' || !state.tracks[item.id] || prev.tracks[item.id]) continue;
     playlist.remove(i);
     playlist.insert(sourceFor(item), i);
+  }
+});
+
+// --- Last session (restored at launch) --------------------------------------
+
+type SavedSession = { tracks: LibraryTrack[]; index: number; position: number; repeat: RepeatMode; shuffle: boolean };
+
+const sessionFile = new File(supportDir, 'player.json');
+
+/** Saves the queue of library songs (previews expire, so they are left out) and where playback is. */
+function saveSession() {
+  try {
+    const { queue, index, position, repeat, shuffle } = usePlayer.getState();
+    const current = queue[index];
+    const tracks: LibraryTrack[] = [];
+    let savedIndex = 0;
+    for (const item of queue) {
+      if (item.kind !== 'library' || !item.library) continue;
+      if (item.key === current?.key) savedIndex = tracks.length;
+      tracks.push(item.library);
+    }
+    if (!tracks.length) {
+      if (sessionFile.exists) sessionFile.delete();
+      return;
+    }
+    const session: SavedSession = {
+      tracks,
+      index: savedIndex,
+      position: current?.kind === 'library' ? Math.floor(position) : 0,
+      repeat,
+      shuffle,
+    };
+    if (!supportDir.exists) supportDir.create({ intermediates: true });
+    sessionFile.writeSync(JSON.stringify(session));
+  } catch (error) {
+    console.warn('[player] could not save the session', error);
+  }
+}
+
+function readSession(): SavedSession | null {
+  try {
+    if (!sessionFile.exists) return null;
+    const session = JSON.parse(sessionFile.textSync()) as SavedSession;
+    return session.tracks?.length ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+// Save when the queue or the current song changes, and every 10 seconds of playback.
+let lastSave = 0;
+usePlayer.subscribe((state, prev) => {
+  const now = Date.now();
+  if (state.queue !== prev.queue || state.index !== prev.index || state.repeat !== prev.repeat || now - lastSave > 10000) {
+    lastSave = now;
+    saveSession();
   }
 });
 

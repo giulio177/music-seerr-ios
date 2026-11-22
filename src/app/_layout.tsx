@@ -9,6 +9,7 @@ import { ToastHost } from '@/components/Toast';
 import { Backdrop } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useOffline } from '@/lib/offline';
+import { usePlayer } from '@/lib/player';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -35,7 +36,12 @@ export default function RootLayout() {
       .catch((error) => {
         console.error('[startup] session', error);
         useAuth.setState({ status: 'signedOut' });
-      });
+      })
+      // After the session (stream URLs need the server and token): bring back the last song, paused.
+      .then(() => {
+        if (useAuth.getState().status === 'signedIn') usePlayer.getState().restore();
+      })
+      .catch((error) => console.error('[startup] player', error));
     // Never leave the splash screen up, whatever happens during startup.
     const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), 5000);
     return () => clearTimeout(timer);

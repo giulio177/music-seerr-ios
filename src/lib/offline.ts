@@ -27,7 +27,7 @@ export type OfflineTrack = {
 };
 
 const musicDir = Paths.document;
-const supportDir = new Directory(Paths.document.parentDirectory, 'Library', 'Application Support', 'MusicSeerr');
+export const supportDir = new Directory(Paths.document.parentDirectory, 'Library', 'Application Support', 'MusicSeerr');
 const coverDir = new Directory(supportDir, 'covers');
 const partialDir = new Directory(Paths.cache, 'downloads');
 
