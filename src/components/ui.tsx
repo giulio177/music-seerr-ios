@@ -31,6 +31,21 @@ export function Backdrop() {
   );
 }
 
+/**
+ * The same backdrop as a style (CSS gradients on the view itself), for navigator content: native tab
+ * content must not get an extra first child, and a transparent tab shows the system's white background.
+ */
+export function useBackdropStyle() {
+  const { accent, accent2 } = useAccent();
+  return {
+    backgroundColor: colors.bg,
+    backgroundImage: [
+      `linear-gradient(150deg, ${withAlpha(accent, 0.22)} 0%, transparent 45%)`,
+      `linear-gradient(150deg, transparent 55%, ${withAlpha(accent2, 0.14)} 100%)`,
+    ].join(', '),
+  };
+}
+
 /** Frosted glass surface with a hairline border. */
 export function Glass({ children, style, intensity = 30 }: { children?: ReactNode; style?: StyleProp<ViewStyle>; intensity?: number }) {
   return (
