@@ -9,8 +9,9 @@ import { TrackRow } from '@/components/TrackRow';
 import { AccentButton, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { downloadedAlbums, downloadedArtists, sortDownloaded } from '@/lib/downloads';
-import { offlineToLibrary, useOffline } from '@/lib/offline';
+import { localCoverUri, offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { usePlaylists } from '@/lib/playlists';
 import { colors } from '@/lib/theme';
 import type { Album, Artist, LibraryTrack, Playlist } from '@/lib/types';
 
@@ -151,12 +152,26 @@ function ServerList({ kind, query }: { kind: Kind; query: string }) {
 function DownloadedList({ kind, query, artist, album }: { kind: Kind; query: string; artist?: string; album?: string }) {
   const { t } = useTranslation();
   const saved = useOffline((s) => s.tracks);
+  const playlists = usePlaylists((s) => s.playlists);
   const items = useMemo(() => {
     const q = query.toLowerCase();
     const match = (...values: (string | null | undefined)[]) => !q || values.some((v) => v?.toLowerCase().includes(q));
     let tracks = Object.values(saved);
     if (artist) tracks = tracks.filter((tr) => tr.artist === artist);
     if (album) tracks = tracks.filter((tr) => tr.album === album);
+    if (kind === 'playlists') {
+      // Playlists with at least one downloaded song; they open with only those songs.
+      return playlists
+        .map((p) => ({ p, songs: p.track_ids.filter((id) => saved[id]) }))
+        .filter(({ p, songs }) => songs.length && match(p.name))
+        .map<Entry>(({ p, songs }) => ({
+          key: p.id,
+          title: p.name,
+          sub: t('common.tracks', { count: songs.length }),
+          local: localCoverUri(saved[songs[0]]),
+          open: () => router.push(`/playlist/${p.id}?downloaded=1`),
+        }));
+    }
     if (kind === 'artists') {
       return downloadedArtists(tracks)
         .filter((a) => match(a.name))
@@ -185,7 +200,7 @@ function DownloadedList({ kind, query, artist, album }: { kind: Kind; query: str
     return sortDownloaded(tracks)
       .filter((tr) => match(tr.title, tr.artist, tr.album))
       .map<Entry>((tr) => ({ key: tr.id, title: tr.title, track: offlineToLibrary(tr) }));
-  }, [saved, kind, query, artist, album, t]);
+  }, [saved, playlists, kind, query, artist, album, t]);
 
   if (!items.length) return <EmptyState icon="arrow-down-circle-outline" body={t(query ? 'search.noResults' : 'offline.empty')} />;
   return <EntryList kind={kind} items={items} />;

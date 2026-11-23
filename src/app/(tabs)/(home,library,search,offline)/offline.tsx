@@ -10,6 +10,7 @@ import { downloadedAlbums, sortDownloaded } from '@/lib/downloads';
 import { formatBytes } from '@/lib/format';
 import { offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { usePlaylists } from '@/lib/playlists';
 import { colors } from '@/lib/theme';
 
 /** Downloads, laid out like the Library: Artists, Albums, Songs, then Recently Downloaded. Works without the server. */
@@ -19,11 +20,23 @@ export default function Offline() {
   const downloadsOnly = useAuth((s) => s.status === 'offline');
 
   const all = useMemo(() => Object.values(saved), [saved]);
+  const hasPlaylists = usePlaylists((s) => s.playlists.some((p) => p.track_ids.some((id) => saved[id])));
   const albums = useMemo(() => downloadedAlbums(all).slice(0, 24), [all]);
   const size = all.reduce((sum, tr) => sum + (tr.size || 0), 0);
   const play = (shuffle: boolean) => usePlayer.getState().playTracks(sortDownloaded(all).map(offlineToLibrary), 0, { shuffle });
 
   const items: NavItem[] = [
+    ...(hasPlaylists
+      ? [
+          {
+            key: 'playlists',
+            title: t('library.playlists'),
+            symbol: 'music.note.list',
+            fallback: 'list',
+            onPress: () => router.push('/browse/playlists?source=downloads'),
+          } satisfies NavItem,
+        ]
+      : []),
     {
       key: 'artists',
       title: t('library.artists'),

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
@@ -11,6 +11,7 @@ import { AccentButton, ErrorState, Loading } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { localCoverUri, offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { usePlaylists } from '@/lib/playlists';
 import { useRequests } from '@/lib/requests';
 import { colors, useAccent } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
@@ -32,28 +33,40 @@ const PATHS: Record<Kind, (id: string) => string> = {
  * Album, artist, and playlist pages.
  * - Albums list the release's songs missing from the library in their place, dimmed (preview and request them).
  * - Artists show their library albums and the releases the library lacks, then every song.
- * - `downloaded` (from the Downloads tab) and offline: albums and artists show only their downloaded songs.
+ * - `downloaded` (from the Downloads tab) and offline: only the downloaded songs (playlists in their order, from `usePlaylists`).
  */
 export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: string; downloaded?: boolean }) {
   const { t } = useTranslation();
   const unreachable = useAuth((s) => s.unreachable);
-  const localOnly = !!downloaded && kind !== 'playlist';
+  const localOnly = !!downloaded;
   const { data, error, loading, refreshing, refresh, reload } = useApi<Response>(localOnly ? null : PATHS[kind](id));
   const catalogPath = !localOnly && !unreachable && data && kind !== 'playlist' ? `/api/jellyfin/${kind}/${id}/catalog` : null;
   const catalog = useApi<{ missing?: ReleaseTrack[]; releases?: Release[] }>(catalogPath);
   const savedTracks = useOffline((s) => s.tracks);
+  const savedPlaylist = usePlaylists((s) => (kind === 'playlist' ? s.playlists.find((p) => p.id === id) : undefined));
   const active = useOffline((s) => s.active);
   const { jobs, request, requestAll } = useRequests();
   const { accent } = useAccent();
 
   const local = useMemo(() => {
     if (!localOnly && !error?.offline) return null;
+    if (kind === 'playlist') {
+      // Playlist order, downloaded songs only (the playlist itself is remembered from the last online check).
+      const songs = (savedPlaylist?.track_ids ?? []).flatMap((trackId) => (savedTracks[trackId] ? [savedTracks[trackId]] : []));
+      return songs.length ? { tracks: songs.map(offlineToLibrary), info: { name: savedPlaylist!.name } as Info } : null;
+    }
     const rows = Object.values(savedTracks).filter((tr) => (kind === 'album' ? tr.album_id === id : kind === 'artist' ? tr.artist_id === id : false));
     if (!rows.length) return null;
     rows.sort((a, b) => a.album.localeCompare(b.album) || (a.index_number ?? 0) - (b.index_number ?? 0));
     const info: Info = kind === 'album' ? { name: rows[0].album, artist: rows[0].artist, artist_id: rows[0].artist_id } : { name: rows[0].artist };
     return { tracks: rows.map(offlineToLibrary), info };
-  }, [localOnly, error, savedTracks, kind, id]);
+  }, [localOnly, error, savedTracks, savedPlaylist, kind, id]);
+
+  useEffect(() => {
+    if (kind === 'playlist' && data?.playlist?.name) {
+      usePlaylists.getState().remember({ id, name: data.playlist.name, cover_url: data.playlist.cover_url, track_ids: data.tracks.map((tr) => tr.id) });
+    }
+  }, [kind, id, data]);
 
   const info: Info | null | undefined = local?.info ?? (data ? data[kind] : null);
   const tracks = useMemo(() => local?.tracks ?? data?.tracks ?? [], [local, data]);
@@ -132,7 +145,7 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
     );
   }
 
-  const firstSaved = kind === 'album' && tracks[0] ? savedTracks[tracks[0].id] : undefined;
+  const firstSaved = (kind === 'album' || (kind === 'playlist' && local)) && tracks[0] ? savedTracks[tracks[0].id] : undefined;
   const headerLocal = firstSaved ? localCoverUri(firstSaved) : null;
   const coverPath = info?.cover_url ?? (kind !== 'artist' ? `/api/jellyfin/image/${id}` : undefined);
   const subtitle =

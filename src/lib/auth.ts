@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { api, ApiError, bindSession, normalizeServerUrl } from './api';
 import { backfillCovers } from './offline';
+import { usePlaylists } from './playlists';
 import { useAccent } from './theme';
 import type { User } from './types';
 
@@ -93,6 +94,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       if (!session.user.is_guest) {
         loadAccent();
         backfillCovers();
+        usePlaylists.getState().refresh();
       }
     } catch (error) {
       if (error instanceof ApiError && error.offline) set({ unreachable: true });
