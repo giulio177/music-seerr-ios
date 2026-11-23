@@ -13,8 +13,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
-          "NSAllowsLocalNetworking": true
+          "NSAllowsArbitraryLoads": true
         },
         "NSLocalNetworkUsageDescription": "Music Seerr connects to your Music Seerr server on your home network.",
         "ITSAppUsesNonExemptEncryption": false,
