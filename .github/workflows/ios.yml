@@ -3,7 +3,8 @@ name: iOS build
 # Builds an unsigned .ipa on a macOS runner. AltStore / SideStore sign it on install
 # with the user's own Apple ID, so no Apple Developer account or certificate is needed.
 #
-# - push to main / pull request: release build, uploaded as a workflow artifact
+# - push to main: release and development builds from the same commit, uploaded as workflow artifacts
+# - pull request: release build, uploaded as a workflow artifact
 # - tag vX.Y.Z: release build published as a GitHub release, plus the AltStore source
 # - manual run: choose release or development (Expo dev client, loads JS from `npx expo start`)
 
@@ -31,8 +32,12 @@ jobs:
   build:
     runs-on: xcode-27
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON((github.event_name == 'push' && github.ref == 'refs/heads/main') && '["release","development"]' || format('["{0}"]', inputs.variant || 'release')) }}
     env:
-      VARIANT: ${{ inputs.variant || 'release' }}
+      VARIANT: ${{ matrix.variant }}
     steps:
       - uses: actions/checkout@v4
 
