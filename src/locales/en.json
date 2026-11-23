@@ -149,6 +149,7 @@
     "offlineBanner": "Server unreachable. Downloaded songs still play.",
     "preferences": "Preferences",
     "preferencesFooter": "Saved to your account: the web app uses the same settings.",
+    "preferencesPending": "Saved on this iPhone. Sent to your account, and to the web app, when the server is reachable again.",
     "language": "Language",
     "languageSystem": "iPhone language",
     "accent": "Accent color",

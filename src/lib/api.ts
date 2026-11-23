@@ -29,6 +29,16 @@ export function normalizeServerUrl(input: string) {
   return url.replace(/\/+$/, '');
 }
 
+/**
+ * Addresses to try for what the user typed: as written, then on Music Seerr's default port 8000
+ * when an `http://` address names no port (port 80 is rarely where the server listens).
+ */
+export function serverCandidates(input: string) {
+  const url = normalizeServerUrl(input);
+  const match = /^http:\/\/([^/:]+)$/i.exec(url);
+  return match ? [url, `${url}:8000`] : [url];
+}
+
 /** Absolute URL for a backend path (paths from the API start with `/api/`). */
 export function absoluteUrl(path: string, server = currentSession().serverUrl) {
   if (/^https?:\/\//i.test(path)) return path;

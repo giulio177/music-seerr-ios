@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { AccountButton } from '@/components/TabHeader';
 import { colors } from '@/lib/theme';
 
 // Home, Library, Search, and Downloads each get their own stack; album, artist, and playlist pages are shared.
@@ -23,6 +24,8 @@ export default function SharedStack() {
         headerLargeTitleStyle: { color: colors.text },
         headerBackButtonDisplayMode: 'minimal',
         contentStyle: { backgroundColor: 'transparent' },
+        // Pushed pages keep the account picture top right, as the tab roots do (those draw it in TabHeader).
+        unstable_headerRightItems: () => [{ type: 'custom', element: <AccountButton size={34} />, hidesSharedBackground: true }],
       }}
     />
   );

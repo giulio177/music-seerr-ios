@@ -149,6 +149,7 @@
     "offlineBanner": "Server non raggiungibile. I brani scaricati funzionano comunque.",
     "preferences": "Preferenze",
     "preferencesFooter": "Salvate nel tuo account: la web app usa le stesse impostazioni.",
+    "preferencesPending": "Salvate su questo iPhone. Arriveranno al tuo account, e alla web app, quando il server sarà di nuovo raggiungibile.",
     "language": "Lingua",
     "languageSystem": "Lingua dell'iPhone",
     "accent": "Colore principale",

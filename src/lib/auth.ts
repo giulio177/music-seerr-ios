@@ -1,9 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-import { api, ApiError, bindSession, normalizeServerUrl } from './api';
+import { api, ApiError, bindSession, serverCandidates } from './api';
 import { backfillCovers } from './offline';
 import { usePlaylists } from './playlists';
-import { useAccent } from './theme';
+import { usePreferences } from './preferences';
 import type { User } from './types';
 
 const KEYS = { server: 'server_url', token: 'session_token', user: 'session_user' };
@@ -47,13 +47,25 @@ async function persist(server: string, token: string, user: User) {
   }
 }
 
-async function loadAccent() {
-  try {
-    const prefs = await api<{ accent_color?: string | null; default_accent_color?: string | null }>('/api/me/preferences');
-    useAccent.getState().setAccent(prefs.accent_color || prefs.default_accent_color);
-  } catch {
-    // Keep the current accent.
+/** Runs `request` on the first address that answers; throws the first address's error when none does. */
+async function firstReachable<T>(input: string, request: (serverUrl: string) => Promise<T>): Promise<{ serverUrl: string; result: T }> {
+  let first: unknown = null;
+  for (const serverUrl of serverCandidates(input)) {
+    try {
+      return { serverUrl, result: await request(serverUrl) };
+    } catch (error) {
+      first ??= error;
+      if (!(error instanceof ApiError && error.offline)) break;
+    }
   }
+  throw first;
+}
+
+/** Restores this account's saved preferences (accent color) and refreshes them from the server. */
+function loadPreferences(user: User | null) {
+  if (!user || user.is_guest) return;
+  if (usePreferences.getState().userId !== (user.id ?? user.name)) usePreferences.getState().restore(user.id ?? user.name);
+  usePreferences.getState().sync();
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -79,6 +91,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Open the app at once with the saved session (downloads work without the server),
     // then confirm it in the background.
     set({ status: 'signedIn', serverUrl, token, user });
+    if (user && !user.is_guest) usePreferences.getState().restore(user.id ?? user.name);
     get().verify();
   },
 
@@ -92,7 +105,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ user: session.user, unreachable: false });
       await SecureStore.setItemAsync(KEYS.user, JSON.stringify(session.user)).catch(() => undefined);
       if (!session.user.is_guest) {
-        loadAccent();
+        loadPreferences(session.user);
         backfillCovers();
         usePlaylists.getState().refresh();
       }
@@ -106,35 +119,38 @@ export const useAuth = create<AuthState>((set, get) => ({
   leaveDownloadsOnly: () => set({ status: 'signedOut' }),
 
   login: async (server, username, password) => {
-    const serverUrl = normalizeServerUrl(server);
-    const res = await api<LoginResponse>('/api/auth/login', {
-      method: 'POST',
-      server: serverUrl,
-      token: null,
-      body: { username: username.trim(), password },
-    });
+    const { serverUrl, result: res } = await firstReachable(server, (url) =>
+      api<LoginResponse>('/api/auth/login', {
+        method: 'POST',
+        server: url,
+        token: null,
+        body: { username: username.trim(), password },
+      }),
+    );
     if (!res.session_token) throw new ApiError(500, 'server_too_old');
     await persist(serverUrl, res.session_token, res.user);
     set({ status: 'signedIn', serverUrl, token: res.session_token, user: res.user, unreachable: false });
-    loadAccent();
+    loadPreferences(res.user);
   },
 
   continueAsGuest: async (server) => {
-    const serverUrl = normalizeServerUrl(server);
-    const res = await api<LoginResponse>('/api/auth/guest', { method: 'POST', server: serverUrl, token: null });
+    const { serverUrl, result: res } = await firstReachable(server, (url) =>
+      api<LoginResponse>('/api/auth/guest', { method: 'POST', server: url, token: null }),
+    );
     if (!res.session_token) throw new ApiError(500, 'server_too_old');
     await persist(serverUrl, res.session_token, res.user);
     set({ status: 'signedIn', serverUrl, token: res.session_token, user: res.user, unreachable: false });
   },
 
   changeServer: async (server) => {
-    const serverUrl = normalizeServerUrl(server);
     const { token } = get();
-    const session = await api<{ authenticated: boolean; user: User | null }>('/api/auth/session', { server: serverUrl, token, timeoutMs: 8000 });
+    const { serverUrl, result: session } = await firstReachable(server, (url) =>
+      api<{ authenticated: boolean; user: User | null }>('/api/auth/session', { server: url, token, timeoutMs: 8000 }),
+    );
     if (!session.authenticated || !session.user || !token) throw new ApiError(401, 'session_not_valid');
     await persist(serverUrl, token, session.user);
     set({ serverUrl, user: session.user, unreachable: false });
-    if (!session.user.is_guest) loadAccent();
+    loadPreferences(session.user);
   },
 
   logout: async () => {
@@ -149,6 +165,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   expire: () => {
     SecureStore.deleteItemAsync(KEYS.token).catch(() => undefined);
     SecureStore.deleteItemAsync(KEYS.user).catch(() => undefined);
+    usePreferences.getState().clear();
     set({ status: 'signedOut', token: null, user: null, unreachable: false });
   },
 }));
@@ -157,6 +174,10 @@ bindSession(
   () => useAuth.getState(),
   () => useAuth.getState().expire(),
   (reachable) => {
-    if (useAuth.getState().unreachable === reachable) useAuth.setState({ unreachable: !reachable });
+    const { unreachable, user } = useAuth.getState();
+    if (unreachable !== reachable) return;
+    useAuth.setState({ unreachable: !reachable });
+    // Back online: send the preferences changed meanwhile.
+    if (reachable && user && !user.is_guest) usePreferences.getState().sync();
   },
 );

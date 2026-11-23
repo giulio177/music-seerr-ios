@@ -15,10 +15,10 @@ import { formatBytes } from '@/lib/format';
 import { savedLanguage, setLanguage, type LanguageChoice } from '@/lib/language';
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { usePreferences, type PreferenceChange } from '@/lib/preferences';
 import { ACCENT_PRESETS, colors, resolveAccent, useAccent } from '@/lib/theme';
 import { useApi } from '@/lib/useApi';
 
-type Preferences = { accent_color: string | null; default_accent_color: string; crossfade_seconds: number; show_other_users_controls: boolean };
 type ServerSettings = {
   music_dir: string;
   dir_exists: boolean;
@@ -240,25 +240,17 @@ function PreferencesSection() {
   const user = useAuth((s) => s.user);
   const unreachable = useAuth((s) => s.unreachable);
   const signedIn = !!user && !user.is_guest;
-  const prefs = useApi<Preferences>(unreachable || !user ? null : '/api/me/preferences');
+  const prefs = usePreferences((s) => s.prefs);
+  const waiting = usePreferences((s) => Object.keys(s.pending).length > 0);
   const [language, setChoice] = useState<LanguageChoice>('system');
-  const [accent, setAccentChoice] = useState<string | null>(null);
-  const [crossfade, setCrossfade] = useState<number | null>(null);
-  const [adminControls, setAdminControls] = useState<boolean | null>(null);
   const { accent: accentColor } = useAccent();
 
   useEffect(() => {
     savedLanguage().then(setChoice);
-  }, []);
+    if (signedIn) usePreferences.getState().sync();
+  }, [signedIn]);
 
-  const save = async (body: Partial<Preferences>) => {
-    try {
-      await api('/api/me/preferences', { method: 'POST', body });
-    } catch (e) {
-      toast(errorText(e, t));
-      prefs.reload();
-    }
-  };
+  const save = (change: PreferenceChange) => usePreferences.getState().change(change);
 
   const chooseLanguage = async (choice: LanguageChoice) => {
     setChoice(choice);
@@ -267,9 +259,9 @@ function PreferencesSection() {
     if (choice !== 'system' && !unreachable) api('/api/settings', { method: 'POST', body: { language: choice } }).catch(() => undefined);
   };
 
-  const currentAccent = accent ?? prefs.data?.accent_color ?? prefs.data?.default_accent_color ?? 'pink';
-  const seconds = crossfade ?? prefs.data?.crossfade_seconds ?? 0;
-  const showControls = adminControls ?? prefs.data?.show_other_users_controls ?? false;
+  const currentAccent = prefs?.accent_color || prefs?.default_accent_color || 'pink';
+  const seconds = prefs?.crossfade_seconds ?? 0;
+  const showControls = prefs?.show_other_users_controls ?? false;
 
   const languageItems: MenuItem[] = LANGUAGES.map((lang) => ({
     id: lang.id,
@@ -279,7 +271,7 @@ function PreferencesSection() {
   }));
 
   return (
-    <Section title={t('settings.preferences')} footer={signedIn ? t('settings.preferencesFooter') : undefined}>
+    <Section title={t('settings.preferences')} footer={signedIn ? t(waiting ? 'settings.preferencesPending' : 'settings.preferencesFooter') : undefined}>
       <Menu items={languageItems} cancelLabel={t('common.cancel')} title={t('settings.language')}>
         <View pointerEvents="none">
           <Row
@@ -304,8 +296,6 @@ function PreferencesSection() {
                     accessibilityLabel={name}
                     accessibilityState={{ selected }}
                     onPress={() => {
-                      setAccentChoice(name);
-                      useAccent.getState().setAccent(name);
                       save({ accent_color: name });
                     }}
                     style={[styles.swatchRing, selected && { borderColor: preset.accent }]}
@@ -329,7 +319,6 @@ function PreferencesSection() {
                   disabled={step < 0 ? seconds <= 0 : seconds >= 12}
                   onPress={() => {
                     const next = Math.max(0, Math.min(12, seconds + step));
-                    setCrossfade(next);
                     save({ crossfade_seconds: next });
                   }}
                   style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}
@@ -345,7 +334,6 @@ function PreferencesSection() {
                 value={showControls}
                 trackColor={{ true: accentColor }}
                 onValueChange={(value) => {
-                  setAdminControls(value);
                   save({ show_other_users_controls: value });
                 }}
               />
