@@ -8,6 +8,7 @@
       "RoutePickerModule",
       "ScrubberModule",
       "MenuButtonModule",
+      "ContextMenuModule",
       "SwipeLockModule",
       "TabBarSearchPinModule"
     ]

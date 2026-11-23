@@ -46,7 +46,7 @@ export function MiniPlayer() {
 
   return (
     <SwipeArea style={styles.wrap} {...responder.panHandlers}>
-      {TabBarSearchPinView ? <TabBarSearchPinView collapsable={false} pointerEvents="none" style={styles.pin} /> : null}
+      {inline && TabBarSearchPinView ? <TabBarSearchPinView collapsable={false} pointerEvents="none" style={styles.pin} /> : null}
       <Pressable testID="mini-player" style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
         <Animated.View style={[styles.slide, { transform: [{ translateX: x }] }]}>
           <Cover path={item?.cover} local={item?.coverLocal} fallback={item?.coverFallback} size={inline ? 30 : 36} />

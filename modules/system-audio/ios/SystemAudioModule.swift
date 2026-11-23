@@ -314,6 +314,14 @@ final class MenuButtonView: ExpoView {
   }
 
   private func rebuild() {
+    button.menu = MenuBuilder.build(title: menuTitle ?? "", actions: actions) { [weak self] id in
+      self?.onSelect(["id": id])
+    }
+  }
+}
+
+enum MenuBuilder {
+  static func build(title: String = "", actions: [MenuActionRecord], onSelect: @escaping (String) -> Void) -> UIMenu {
     var groups: [Int: [UIMenuElement]] = [:]
     var order: [Int] = []
     for action in actions {
@@ -321,14 +329,342 @@ final class MenuButtonView: ExpoView {
         title: action.title,
         image: action.systemImage.flatMap { UIImage(systemName: $0) },
         attributes: action.destructive ? .destructive : []
-      ) { [weak self] _ in
-        self?.onSelect(["id": action.id])
+      ) { _ in
+        onSelect(action.id)
       }
       if groups[action.group] == nil { order.append(action.group) }
       groups[action.group, default: []].append(item)
     }
     let sections = order.map { UIMenu(title: "", options: .displayInline, children: groups[$0] ?? []) }
-    button.menu = UIMenu(title: menuTitle ?? "", children: sections)
+    return UIMenu(title: title, children: sections)
+  }
+}
+
+// MARK: - Context menu (long press with Apple Music style preview card)
+
+/// Native UIContextMenuInteraction for song rows and tiles: long pressing lifts the row into an
+/// Apple Music style preview card (cover + title + subtitle) with the native menu below it.
+public class ContextMenuModule: Module {
+  public func definition() -> ModuleDefinition {
+    Name("ContextMenu")
+
+    View(ContextMenuView.self) {
+      Events("onSelect", "onPreviewPress")
+
+      Prop("actions") { (view: ContextMenuView, actions: [MenuActionRecord]) in
+        view.actions = actions
+      }
+      Prop("previewTitle") { (view: ContextMenuView, title: String?) in
+        view.previewTitle = title
+      }
+      Prop("previewSubtitle") { (view: ContextMenuView, subtitle: String?) in
+        view.previewSubtitle = subtitle
+      }
+      Prop("previewImages") { (view: ContextMenuView, images: [String]) in
+        view.previewImages = images
+      }
+      Prop("previewHeaders") { (view: ContextMenuView, headers: [String: String]) in
+        view.previewHeaders = headers
+      }
+    }
+  }
+}
+
+final class ContextMenuView: ExpoView, UIContextMenuInteractionDelegate {
+  let onSelect = EventDispatcher()
+  let onPreviewPress = EventDispatcher()
+
+  var actions: [MenuActionRecord] = []
+  var previewTitle: String?
+  var previewSubtitle: String?
+  var previewImages: [String] = []
+  var previewHeaders: [String: String] = [:]
+
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    addInteraction(UIContextMenuInteraction(delegate: self))
+  }
+
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    configurationForMenuAtLocation location: CGPoint
+  ) -> UIContextMenuConfiguration? {
+    guard !actions.isEmpty else { return nil }
+    // Let the trailing "..." MenuButton handle its own interactions without triggering the row context menu.
+    if let hit = hitTest(location, with: nil), Self.isInsideMenuButton(hit, stoppingAt: self) {
+      return nil
+    }
+
+    let snapshotActions = actions
+    let title = previewTitle
+    let subtitle = previewSubtitle
+    let images = previewImages
+    let headers = previewHeaders
+    let initialImage = findExistingImage()
+    let containerWidth = window?.bounds.width ?? max(bounds.width, 390)
+    let cardWidth = min(containerWidth - 32, 360)
+
+    let previewProvider: UIContextMenuContentPreviewProvider? = title.map { previewTitle in
+      {
+        TrackPreviewController(
+          title: previewTitle,
+          subtitle: subtitle,
+          initialImage: initialImage,
+          imageUrls: images,
+          imageHeaders: headers,
+          cardWidth: cardWidth
+        )
+      }
+    }
+
+    return UIContextMenuConfiguration(identifier: nil, previewProvider: previewProvider) { [weak self] _ in
+      MenuBuilder.build(actions: snapshotActions) { id in
+        self?.onSelect(["id": id])
+      }
+    }
+  }
+
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration
+  ) -> UITargetedPreview? {
+    makeTargetedPreview()
+  }
+
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+  ) -> UITargetedPreview? {
+    makeTargetedPreview()
+  }
+
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration,
+    animator: UIContextMenuInteractionCommitAnimating
+  ) {
+    animator.preferredCommitStyle = .dismiss
+    animator.addCompletion { [weak self] in
+      self?.onPreviewPress([:])
+    }
+  }
+
+  private func makeTargetedPreview() -> UITargetedPreview? {
+    guard window != nil else { return nil }
+    let params = UIPreviewParameters()
+    params.backgroundColor = .clear
+    params.visiblePath = UIBezierPath(roundedRect: bounds, cornerRadius: 12)
+    return UITargetedPreview(view: self, parameters: params)
+  }
+
+  private func findExistingImage() -> UIImage? {
+    for raw in previewImages {
+      if let cached = TrackPreviewController.cachedImage(for: raw) { return cached }
+      if raw.hasPrefix("file://"), let url = URL(string: raw), let img = UIImage(contentsOfFile: url.path) {
+        TrackPreviewController.cacheImage(img, for: raw)
+        return img
+      }
+    }
+    return Self.findArtworkImage(in: self)
+  }
+
+  private static func findArtworkImage(in view: UIView) -> UIImage? {
+    if let imageView = view as? UIImageView,
+       let image = imageView.image,
+       !image.isSymbolImage,
+       view.bounds.width >= 36,
+       view.bounds.height >= 36 {
+      return image
+    }
+    for subview in view.subviews {
+      if let found = findArtworkImage(in: subview) { return found }
+    }
+    return nil
+  }
+
+  private static func isInsideMenuButton(_ view: UIView, stoppingAt root: UIView) -> Bool {
+    var current: UIView? = view
+    while let node = current, node !== root {
+      if node is MenuButtonView { return true }
+      current = node.superview
+    }
+    return false
+  }
+}
+
+final class TrackPreviewController: UIViewController {
+  private static let cache: NSCache<NSString, UIImage> = {
+    let c = NSCache<NSString, UIImage>()
+    c.countLimit = 80
+    return c
+  }()
+
+  static func cachedImage(for key: String) -> UIImage? {
+    cache.object(forKey: key as NSString)
+  }
+
+  static func cacheImage(_ image: UIImage, for key: String) {
+    cache.setObject(image, forKey: key as NSString)
+  }
+
+  private let titleText: String
+  private let subtitleText: String?
+  private let initialImage: UIImage?
+  private let imageUrls: [String]
+  private let imageHeaders: [String: String]
+  private let cardWidth: CGFloat
+
+  private let imageView = UIImageView()
+  private let placeholderIcon = UIImageView()
+  private var loadTask: URLSessionDataTask?
+
+  init(
+    title: String,
+    subtitle: String?,
+    initialImage: UIImage?,
+    imageUrls: [String],
+    imageHeaders: [String: String],
+    cardWidth: CGFloat
+  ) {
+    self.titleText = title
+    self.subtitleText = subtitle
+    self.initialImage = initialImage
+    self.imageUrls = imageUrls
+    self.imageHeaders = imageHeaders
+    self.cardWidth = cardWidth
+    super.init(nibName: nil, bundle: nil)
+    preferredContentSize = CGSize(width: cardWidth, height: 84)
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) is not supported")
+  }
+
+  deinit {
+    loadTask?.cancel()
+  }
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    overrideUserInterfaceStyle = .dark
+    view.backgroundColor = UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1.0)
+
+    let artBox = UIView()
+    artBox.translatesAutoresizingMaskIntoConstraints = false
+    artBox.backgroundColor = UIColor(red: 0.16, green: 0.15, blue: 0.21, alpha: 1.0)
+    artBox.layer.cornerRadius = 10
+    artBox.layer.cornerCurve = .continuous
+    artBox.clipsToBounds = true
+
+    let symbolConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
+    placeholderIcon.translatesAutoresizingMaskIntoConstraints = false
+    placeholderIcon.image = UIImage(systemName: "music.note", withConfiguration: symbolConfig)
+    placeholderIcon.tintColor = UIColor.white.withAlphaComponent(0.32)
+    placeholderIcon.contentMode = .scaleAspectFit
+
+    imageView.translatesAutoresizingMaskIntoConstraints = false
+    imageView.contentMode = .scaleAspectFill
+    imageView.clipsToBounds = true
+
+    artBox.addSubview(placeholderIcon)
+    artBox.addSubview(imageView)
+
+    let titleLabel = UILabel()
+    titleLabel.text = titleText
+    titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+    titleLabel.textColor = .white
+    titleLabel.numberOfLines = 2
+    titleLabel.lineBreakMode = .byTruncatingTail
+
+    let stack = UIStackView(arrangedSubviews: [titleLabel])
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    stack.axis = .vertical
+    stack.spacing = 3
+
+    if let subtitle = subtitleText, !subtitle.isEmpty {
+      let subLabel = UILabel()
+      subLabel.text = subtitle
+      subLabel.font = .systemFont(ofSize: 14, weight: .regular)
+      subLabel.textColor = UIColor.white.withAlphaComponent(0.62)
+      subLabel.numberOfLines = 1
+      subLabel.lineBreakMode = .byTruncatingTail
+      stack.addArrangedSubview(subLabel)
+    }
+
+    view.addSubview(artBox)
+    view.addSubview(stack)
+
+    NSLayoutConstraint.activate([
+      artBox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+      artBox.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+      artBox.widthAnchor.constraint(equalToConstant: 60),
+      artBox.heightAnchor.constraint(equalToConstant: 60),
+
+      placeholderIcon.centerXAnchor.constraint(equalTo: artBox.centerXAnchor),
+      placeholderIcon.centerYAnchor.constraint(equalTo: artBox.centerYAnchor),
+
+      imageView.topAnchor.constraint(equalTo: artBox.topAnchor),
+      imageView.bottomAnchor.constraint(equalTo: artBox.bottomAnchor),
+      imageView.leadingAnchor.constraint(equalTo: artBox.leadingAnchor),
+      imageView.trailingAnchor.constraint(equalTo: artBox.trailingAnchor),
+
+      stack.leadingAnchor.constraint(equalTo: artBox.trailingAnchor, constant: 12),
+      stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+      stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+    ])
+
+    if let initialImage {
+      imageView.image = initialImage
+      placeholderIcon.isHidden = true
+    } else {
+      loadNextImage(index: 0)
+    }
+  }
+
+  private func loadNextImage(index: Int) {
+    guard index < imageUrls.count else { return }
+    let raw = imageUrls[index]
+    if let cached = Self.cachedImage(for: raw) {
+      applyImage(cached)
+      return
+    }
+    guard let url = URL(string: raw) else {
+      loadNextImage(index: index + 1)
+      return
+    }
+    if url.isFileURL {
+      if let img = UIImage(contentsOfFile: url.path) {
+        Self.cacheImage(img, for: raw)
+        applyImage(img)
+      } else {
+        loadNextImage(index: index + 1)
+      }
+      return
+    }
+
+    var request = URLRequest(url: url)
+    for (key, value) in imageHeaders {
+      request.setValue(value, forHTTPHeaderField: key)
+    }
+    loadTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, _ in
+      let status = (response as? HTTPURLResponse)?.statusCode ?? 200
+      let image = (status >= 200 && status < 300) ? data.flatMap(UIImage.init(data:)) : nil
+      DispatchQueue.main.async {
+        guard let self else { return }
+        if let image {
+          Self.cacheImage(image, for: raw)
+          self.applyImage(image)
+        } else {
+          self.loadNextImage(index: index + 1)
+        }
+      }
+    }
+    loadTask?.resume()
+  }
+
+  private func applyImage(_ image: UIImage) {
+    imageView.image = image
+    placeholderIcon.isHidden = true
   }
 }
 
@@ -399,46 +735,76 @@ public class TabBarSearchPinModule: Module {
 
 final class TabBarSearchPinView: ExpoView {
   private weak var observedTabBarController: UITabBarController?
+  private weak var observedAccessoryView: UIView?
+  private var traitRegistration: AnyObject?
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     isUserInteractionEnabled = false
-    if #available(iOS 27.0, *) {
-      registerForTraitChanges([UITraitTabAccessoryEnvironment.self]) { (view: TabBarSearchPinView, _) in
-        view.scheduleSync()
-      }
-    }
   }
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
     if window != nil {
-      scheduleSync()
-    } else if #available(iOS 27.0, *) {
-      let controller = observedTabBarController
-      observedTabBarController = nil
-      DispatchQueue.main.async {
-        guard let controller, controller.bottomAccessory == nil, controller.prominentTabIdentifier != nil else {
-          return
+      if !attachAndSync() {
+        DispatchQueue.main.async { [weak self] in
+          _ = self?.attachAndSync()
         }
-        controller.setProminentTabIdentifier(nil, animated: true)
+      }
+    } else {
+      detachObserver()
+      if #available(iOS 27.0, *) {
+        let controller = observedTabBarController
+        observedTabBarController = nil
+        DispatchQueue.main.async {
+          guard let controller, controller.bottomAccessory == nil, controller.prominentTabIdentifier != nil else {
+            return
+          }
+          controller.setProminentTabIdentifier(nil, animated: false)
+        }
       }
     }
   }
 
-  private func scheduleSync() {
-    DispatchQueue.main.async { [weak self] in
-      self?.syncProminentSearch()
+  private func detachObserver() {
+    if #available(iOS 27.0, *), let reg = traitRegistration as? UITraitChangeRegistration {
+      observedAccessoryView?.unregisterForTraitChanges(reg)
     }
+    traitRegistration = nil
+    observedAccessoryView = nil
   }
 
-  private func syncProminentSearch() {
-    guard #available(iOS 27.0, *), window != nil, let controller = findTabBarController() else { return }
+  @discardableResult
+  private func attachAndSync() -> Bool {
+    guard #available(iOS 27.0, *), window != nil, let controller = findTabBarController() else { return false }
     observedTabBarController = controller
-    let isInline = traitCollection.tabAccessoryEnvironment == .inline
+    // Observe bottomAccessory.contentView directly: RNSTabsBottomAccessoryHelper hides the inactive
+    // regular/inline child view, whereas contentView stays visible and receives every
+    // UITraitTabAccessoryEnvironment transition synchronously in both directions.
+    let targetView = controller.bottomAccessory?.contentView ?? self
+    if observedAccessoryView !== targetView {
+      detachObserver()
+      observedAccessoryView = targetView
+      traitRegistration = targetView.registerForTraitChanges([UITraitTabAccessoryEnvironment.self]) { [weak self] (observed: UIView, _) in
+        self?.syncProminentSearch(using: observed)
+      }
+    }
+    syncProminentSearch(using: targetView, controller: controller)
+    return true
+  }
+
+  private func syncProminentSearch(using observed: UIView, controller: UITabBarController? = nil) {
+    guard #available(iOS 27.0, *), window != nil,
+          let controller = controller ?? observedTabBarController ?? findTabBarController() else {
+      return
+    }
+    observedTabBarController = controller
+    let isInline = observed.traitCollection.tabAccessoryEnvironment == .inline
     let target: String? = isInline ? controller.tabs.first(where: { $0 is UISearchTab })?.identifier : nil
     guard controller.prominentTabIdentifier != target else { return }
-    controller.setProminentTabIdentifier(target, animated: true)
+    // Apply synchronously without launching a competing second prominent-tab animation so UIKit
+    // coalesces the change into its own minimize/expand transition.
+    controller.setProminentTabIdentifier(target, animated: false)
   }
 
   private func findTabBarController() -> UITabBarController? {

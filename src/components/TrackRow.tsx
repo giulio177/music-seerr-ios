@@ -4,13 +4,13 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from '@/lib/format';
-import { albumCoverPath } from '@/lib/api';
+import { albumCoverPath, authHeaders } from '@/lib/api';
 import { localCoverUri, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
-import { Cover } from './Cover';
-import { Menu, showActionSheet, type MenuItem } from './Menu';
+import { Cover, coverCandidateUrls } from './Cover';
+import { ContextMenu, hasNativeContextMenu, Menu, showActionSheet, type MenuItem } from './Menu';
 import { toast } from './Toast';
 
 /** Download state badge: progress ring while downloading, check mark when saved. */
@@ -83,34 +83,50 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: P
   const current = usePlayer((s) => s.queue[s.index]?.id === track.id);
   const offline = useOffline((s) => s.tracks[track.id]);
   const { accent } = useAccent();
+  const localCover = offline ? localCoverUri(offline) : null;
+  const fallbackCover = albumCoverPath(track.album_id);
+  const items = trackMenuItems(track, t);
+  const previewImages = coverCandidateUrls(track.cover_url, localCover, fallbackCover);
+
   return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={() => showActionSheet(trackMenuItems(track, t), t('common.cancel'), track.title, track.artist)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    <ContextMenu
+      items={items}
+      previewTitle={track.title}
+      previewSubtitle={track.artist}
+      previewImages={previewImages}
+      previewHeaders={authHeaders()}
+      onPreviewPress={onPress}
     >
-      {showNumber ? (
-        <Text style={[styles.number, current && { color: accent }]}>{track.index_number ?? '·'}</Text>
-      ) : (
-        <Cover path={track.cover_url} local={offline ? localCoverUri(offline) : null} fallback={albumCoverPath(track.album_id)} size={48} />
-      )}
-      <View style={styles.meta}>
-        <Text numberOfLines={1} style={[styles.title, current && { color: accent }]}>
-          {track.title}
-        </Text>
-        <View style={styles.subRow}>
-          <DownloadBadge id={track.id} />
-          <Text numberOfLines={1} style={styles.artist}>
-            {track.artist}
-            {showNumber ? '' : track.album ? ` · ${track.album}` : ''}
+      <Pressable
+        onPress={onPress}
+        onLongPress={
+          hasNativeContextMenu ? undefined : () => showActionSheet(items, t('common.cancel'), track.title, track.artist)
+        }
+        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      >
+        {showNumber ? (
+          <Text style={[styles.number, current && { color: accent }]}>{track.index_number ?? '·'}</Text>
+        ) : (
+          <Cover path={track.cover_url} local={localCover} fallback={fallbackCover} size={48} />
+        )}
+        <View style={styles.meta}>
+          <Text numberOfLines={1} style={[styles.title, current && { color: accent }]}>
+            {track.title}
           </Text>
+          <View style={styles.subRow}>
+            <DownloadBadge id={track.id} />
+            <Text numberOfLines={1} style={styles.artist}>
+              {track.artist}
+              {showNumber ? '' : track.album ? ` · ${track.album}` : ''}
+            </Text>
+          </View>
         </View>
-      </View>
-      <Text style={styles.duration}>{formatTime(track.duration_sec)}</Text>
-      <Menu items={trackMenuItems(track, t)} cancelLabel={t('common.cancel')} accessibilityLabel={t('common.more')} style={styles.more}>
-        <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
-      </Menu>
-    </Pressable>
+        <Text style={styles.duration}>{formatTime(track.duration_sec)}</Text>
+        <Menu items={items} cancelLabel={t('common.cancel')} accessibilityLabel={t('common.more')} style={styles.more}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+        </Menu>
+      </Pressable>
+    </ContextMenu>
   );
 });
 

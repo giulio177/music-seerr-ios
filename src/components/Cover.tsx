@@ -9,6 +9,18 @@ import { radius } from '@/lib/theme';
 /** Artwork URLs that failed this launch (songs without a cover): not requested again on every mount. */
 const missing = new Set<string>();
 
+/** Ordered candidate artwork URIs for native previews (local file first, then server/fallback). */
+export function coverCandidateUrls(path?: string | null, local?: string | null, fallback?: string | null): string[] {
+  return [local, path, fallback]
+    .filter((uri): uri is string => !!uri)
+    .map((uri) => {
+      if (uri === local) return uri;
+      const server = serverPath(uri);
+      return server ? absoluteUrl(server) : uri;
+    })
+    .filter((uri) => !missing.has(uri));
+}
+
 /**
  * Artwork. `path` is a backend path (`/api/jellyfin/image/...`) or an absolute URL; server images load with
  * the session token. `local` is a downloaded file and wins when present; `fallback` (usually the album

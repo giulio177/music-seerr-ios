@@ -3,10 +3,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
-import { Cover } from '@/components/Cover';
+import { Cover, coverCandidateUrls } from '@/components/Cover';
+import { ContextMenu } from '@/components/Menu';
+import { trackMenuItems } from '@/components/TrackRow';
 import { TabHeader, TopFade } from '@/components/TabHeader';
 import { Loading, OfflineState } from '@/components/ui';
+import { albumCoverPath, authHeaders } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { localCoverUri, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { useRequests } from '@/lib/requests';
 import { colors } from '@/lib/theme';
@@ -102,12 +106,7 @@ export default function Home() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.shelf}
               renderItem={({ item, index }) => (
-                <Tile
-                  title={item.title}
-                  sub={item.artist}
-                  cover={item.cover_url}
-                  onPress={() => usePlayer.getState().playTracks(recent, index)}
-                />
+                <RecentTrackTile track={item} onPress={() => usePlayer.getState().playTracks(recent, index)} />
               )}
             />
           </Shelf>
@@ -159,10 +158,43 @@ function Shelf({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Tile({ title, sub, cover, onPress }: { title: string; sub?: string; cover?: string | null; onPress: () => void }) {
+function RecentTrackTile({ track, onPress }: { track: LibraryTrack; onPress: () => void }) {
+  const { t } = useTranslation();
+  const offline = useOffline((s) => s.tracks[track.id]);
+  const localCover = offline ? localCoverUri(offline) : null;
+  const fallbackCover = albumCoverPath(track.album_id);
+  return (
+    <ContextMenu
+      items={trackMenuItems(track, t)}
+      previewTitle={track.title}
+      previewSubtitle={track.artist}
+      previewImages={coverCandidateUrls(track.cover_url, localCover, fallbackCover)}
+      previewHeaders={authHeaders()}
+      onPreviewPress={onPress}
+    >
+      <Tile title={track.title} sub={track.artist} cover={track.cover_url} local={localCover} fallback={fallbackCover} onPress={onPress} />
+    </ContextMenu>
+  );
+}
+
+function Tile({
+  title,
+  sub,
+  cover,
+  local,
+  fallback,
+  onPress,
+}: {
+  title: string;
+  sub?: string;
+  cover?: string | null;
+  local?: string | null;
+  fallback?: string | null;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ width: TILE, opacity: pressed ? 0.75 : 1 })}>
-      <Cover path={cover} size={TILE} />
+      <Cover path={cover} local={local} fallback={fallback} size={TILE} />
       <Text numberOfLines={1} style={styles.tileTitle}>
         {title}
       </Text>
