@@ -65,7 +65,15 @@
     "requestMissing_one": "Request {{count}} missing song",
     "requestMissing_other": "Request {{count}} missing songs",
     "requestedCount_one": "{{count}} song requested",
-    "requestedCount_other": "{{count}} songs requested"
+    "requestedCount_other": "{{count}} songs requested",
+    "downloadedOnly": "Only the songs downloaded to this iPhone",
+    "downloadedOnlyOf_one": "Only downloaded songs: {{count}} of {{total}}",
+    "downloadedOnlyOf_other": "Only downloaded songs: {{count}} of {{total}}",
+    "showFull": {
+      "playlist": "Show the full playlist",
+      "album": "Show the full album",
+      "artist": "Show the full artist page"
+    }
   },
   "track": {
     "playNext": "Play next",

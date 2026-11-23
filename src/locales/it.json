@@ -65,7 +65,15 @@
     "requestMissing_one": "Richiedi {{count}} brano mancante",
     "requestMissing_other": "Richiedi {{count}} brani mancanti",
     "requestedCount_one": "{{count}} brano richiesto",
-    "requestedCount_other": "{{count}} brani richiesti"
+    "requestedCount_other": "{{count}} brani richiesti",
+    "downloadedOnly": "Solo i brani scaricati su questo iPhone",
+    "downloadedOnlyOf_one": "Solo i brani scaricati: {{count}} di {{total}}",
+    "downloadedOnlyOf_other": "Solo i brani scaricati: {{count}} di {{total}}",
+    "showFull": {
+      "playlist": "Mostra la playlist completa",
+      "album": "Mostra l'album completo",
+      "artist": "Mostra la pagina completa dell'artista"
+    }
   },
   "track": {
     "playNext": "Riproduci dopo",

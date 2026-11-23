@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
+import { Symbol } from '@/components/Symbol';
 import { MissingRow, type ReleaseTrack } from '@/components/MissingRow';
 import { Shelf, TileRow, type TileItem } from '@/components/Shelf';
 import { TrackRow } from '@/components/TrackRow';
@@ -13,7 +14,7 @@ import { localCoverUri, offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { usePlaylists } from '@/lib/playlists';
 import { useRequests } from '@/lib/requests';
-import { colors, useAccent } from '@/lib/theme';
+import { colors, useAccent, withAlpha } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
 import { useApi } from '@/lib/useApi';
 
@@ -167,6 +168,29 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
         ) : (
           <Text style={styles.subtitle}>{subtitle}</Text>
         )}
+        {local ? (
+          <View style={[styles.partial, { borderColor: withAlpha(accent, 0.35), backgroundColor: withAlpha(accent, 0.1) }]}>
+            <View style={styles.partialInfo}>
+              <Symbol name="arrow.down.circle.fill" fallback="arrow-down-circle" size={18} color={accent} />
+              <Text style={styles.partialText} numberOfLines={2}>
+                {kind === 'playlist' && savedPlaylist
+                  ? t('detail.downloadedOnlyOf', { count: tracks.length, total: savedPlaylist.track_ids.length })
+                  : t('detail.downloadedOnly')}
+              </Text>
+            </View>
+            {unreachable ? null : (
+              <Pressable
+                onPress={() => router.push(`/${kind}/${id}`)}
+                hitSlop={6}
+                style={({ pressed }) => [styles.partialLink, pressed && { opacity: 0.6 }]}
+                accessibilityRole="link"
+              >
+                <Text style={[styles.partialLinkText, { color: accent }]}>{t(`detail.showFull.${kind}`)}</Text>
+                <Symbol name="chevron.right" fallback="chevron-forward" size={12} color={accent} />
+              </Pressable>
+            )}
+          </View>
+        ) : null}
         <View style={styles.actions}>
           <AccentButton label={t('common.play')} icon="play" onPress={() => play(0)} style={{ flex: 1 }} disabled={!tracks.length} />
           <AccentButton label={t('common.shuffle')} icon="shuffle" variant="glass" onPress={() => play(0, true)} style={{ flex: 1 }} disabled={!tracks.length} />
@@ -255,6 +279,11 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 24, fontWeight: '800', textAlign: 'center', marginTop: 18 },
   subtitle: { color: colors.textSecondary, fontSize: 16, marginTop: 4, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 12, alignSelf: 'stretch', marginTop: 18 },
+  partial: { alignSelf: 'stretch', marginTop: 16, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+  partialInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  partialText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '500' },
+  partialLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 26 },
+  partialLinkText: { fontSize: 14, fontWeight: '600' },
   links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 20, marginTop: 8 },
   link: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
   linkLabel: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
