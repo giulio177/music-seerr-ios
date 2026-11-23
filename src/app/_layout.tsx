@@ -7,6 +7,7 @@ import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastHost } from '@/components/Toast';
 import { Backdrop } from '@/components/ui';
+import { applySavedLanguage } from '@/lib/language';
 import { useAuth } from '@/lib/auth';
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
@@ -25,6 +26,7 @@ export default function RootLayout() {
   const status = useAuth((s) => s.status);
 
   useEffect(() => {
+    applySavedLanguage().catch(() => undefined);
     try {
       useOffline.getState().refresh();
     } catch (error) {

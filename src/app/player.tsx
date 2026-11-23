@@ -21,7 +21,7 @@ import { trackMenuItems } from '@/components/TrackRow';
 import { Symbol } from '@/components/Symbol';
 import { Backdrop } from '@/components/ui';
 import { formatTime } from '@/lib/format';
-import { parseLrc, useLyrics } from '@/lib/lyrics';
+import { parseLrc, useLyrics, type LyricLine } from '@/lib/lyrics';
 import { useOffline } from '@/lib/offline';
 import { usePlayer, useCurrentItem, type QueueItem } from '@/lib/player';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
@@ -229,18 +229,59 @@ function LyricsPanel({ item }: { item: QueueItem }) {
       showsVerticalScrollIndicator={false}
       renderItem={({ item: line, index }) => (
         <Pressable onPress={() => usePlayer.getState().seek(line.time)}>
-          <Text
+          {line.text ? (
+            <Text
             style={[
               styles.lyricLine,
               index === current ? { color: colors.text } : index < current ? { color: 'rgba(255,255,255,0.35)' } : null,
               index === current && { textShadowColor: withAlpha(accent, 0.8), textShadowRadius: 12 },
             ]}
           >
-            {line.text || '♪'}
-          </Text>
+            {line.text}
+            </Text>
+          ) : (
+            <LyricDots line={line} active={index === current} position={position} />
+          )}
         </Pressable>
       )}
     />
+  );
+}
+
+/**
+ * Instrumental part: three dots that fill one after another over the part's duration (like the web app).
+ * Position updates arrive every half second, so each dot eases to its next value over that time.
+ */
+function LyricDots({ line, active, position }: { line: LyricLine; active: boolean; position: number }) {
+  const [dots] = useState(() => [0, 1, 2].map(() => new Animated.Value(0)));
+  const step = line.duration / 3;
+  const elapsed = active ? position - line.time : 0;
+
+  useEffect(() => {
+    dots.forEach((dot, i) => {
+      const target = active ? Math.min(1, Math.max(0, (elapsed + 0.5 - i * step) / step)) : 0;
+      Animated.timing(dot, { toValue: target, duration: active ? 500 : 200, useNativeDriver: true }).start();
+    });
+  }, [dots, active, elapsed, step]);
+
+  return (
+    <View style={styles.dots}>
+      {dots.map((dot, i) => (
+        <View key={i} style={styles.dotSlot}>
+          <View style={styles.dot} />
+          <Animated.View
+            style={[
+              styles.dot,
+              styles.dotFill,
+              {
+                opacity: dot,
+                transform: [{ scale: dot.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.85, 1.3, 1.15] }) }],
+              },
+            ]}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -523,6 +564,10 @@ const styles = StyleSheet.create({
   barButtonActive: { backgroundColor: 'rgba(255,255,255,0.75)' },
   empty: { color: colors.textSecondary, fontSize: 16, textAlign: 'center', marginTop: 24 },
   plainLyrics: { color: colors.text, fontSize: 20, lineHeight: 32, fontWeight: '600', paddingVertical: 16 },
+  dots: { flexDirection: 'row', gap: 14, paddingVertical: 18, paddingHorizontal: 4 },
+  dotSlot: { width: 13, height: 13 },
+  dot: { position: 'absolute', width: 13, height: 13, borderRadius: 6.5, backgroundColor: 'rgba(255,255,255,0.22)' },
+  dotFill: { backgroundColor: '#fff', shadowColor: '#fff', shadowOpacity: 0.8, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } },
   lyricLine: { color: 'rgba(255,255,255,0.55)', fontSize: 26, fontWeight: '800', lineHeight: 34, paddingVertical: 8 },
   queueTitle: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 6, marginTop: 4 },
   queueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },

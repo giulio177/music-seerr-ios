@@ -4,18 +4,48 @@ import { useOffline } from './offline';
 import type { QueueItem } from './player';
 import type { Lyrics } from './types';
 
-export type LyricLine = { time: number; text: string };
+/** `text` empty means an instrumental part, shown as three dots that fill up over `duration` seconds. */
+export type LyricLine = { time: number; text: string; duration: number };
 
-/** Parses LRC text; a line may carry several timestamps. */
+const DOT_TEXTS = new Set(['\u266a', '...', '..', '\u2022 \u2022 \u2022']);
+
+/**
+ * Parses LRC text (a line may carry several timestamps), the same way as the web app:
+ * music-note and dot lines become instrumental parts, an intro before the first line and
+ * gaps of 7.5 s or more between sung lines get one too.
+ */
 export function parseLrc(lrc: string): LyricLine[] {
-  const lines: LyricLine[] = [];
+  let lines: { time: number; text: string }[] = [];
   for (const raw of lrc.split(/\r?\n/)) {
     const stamps = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
     if (!stamps.length) continue;
-    const text = raw.replace(/\[[^\]]*\]/g, '').trim();
+    let text = raw.replace(/\[[^\]]*\]/g, '').trim();
+    if (DOT_TEXTS.has(text)) text = '';
     for (const stamp of stamps) lines.push({ time: Number(stamp[1]) * 60 + Number(stamp[2]), text });
   }
-  return lines.sort((a, b) => a.time - b.time);
+  lines.sort((a, b) => a.time - b.time);
+
+  // Metadata at 00:00 (e.g. "[00:00.00]Artist") followed by an empty line within a second.
+  if (lines.length > 1 && lines[0].time < 0.5 && lines[1].time < 1 && !lines[1].text) {
+    lines.shift();
+    lines[0].time = 0;
+  }
+  if (lines.length && lines[0].time > 1.2) lines.unshift({ time: 0, text: '' });
+
+  const enriched: { time: number; text: string }[] = [];
+  lines.forEach((line, i) => {
+    enriched.push(line);
+    const next = lines[i + 1];
+    if (next && line.text && next.text && next.time - line.time >= 7.5) {
+      enriched.push({ time: +(line.time + Math.min(4, (next.time - line.time) * 0.4)).toFixed(2), text: '' });
+    }
+  });
+  lines = enriched;
+
+  return lines.map((line, i) => ({
+    ...line,
+    duration: i < lines.length - 1 ? Math.max(0.4, lines[i + 1].time - line.time) : 5,
+  }));
 }
 
 const cache = new Map<string, Lyrics | null>();

@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePlayer, useCurrentItem } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
-import { TabBarSearchPinView } from '../../modules/system-audio';
 import { Cover } from './Cover';
 import { SwipeArea } from './SwipeArea';
 import { IconButton } from './ui';
@@ -46,7 +45,6 @@ export function MiniPlayer() {
 
   return (
     <SwipeArea style={styles.wrap} {...responder.panHandlers}>
-      {inline && TabBarSearchPinView ? <TabBarSearchPinView collapsable={false} pointerEvents="none" style={styles.pin} /> : null}
       <Pressable testID="mini-player" style={styles.wrap} onPress={() => item && router.push('/player')} accessibilityRole="button">
         <Animated.View style={[styles.slide, { transform: [{ translateX: x }] }]}>
           <Cover path={item?.cover} local={item?.coverLocal} fallback={item?.coverFallback} size={inline ? 30 : 36} />
@@ -79,7 +77,6 @@ export function MiniPlayer() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'center', overflow: 'hidden' },
-  pin: { position: 'absolute', width: 0, height: 0 },
   slide: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 10 },
   meta: { flex: 1, minWidth: 0 },
   title: { color: colors.text, fontSize: 14, fontWeight: '600' },

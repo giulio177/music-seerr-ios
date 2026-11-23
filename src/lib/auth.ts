@@ -23,6 +23,11 @@ type AuthState = {
   leaveDownloadsOnly: () => void;
   login: (server: string, username: string, password: string) => Promise<void>;
   continueAsGuest: (server: string) => Promise<void>;
+  /**
+   * Moves the session to another address of the server (LAN, VPN, domain). The saved token must be valid there,
+   * else `session_not_valid` (another server: sign in again) or `offline` (not reachable).
+   */
+  changeServer: (server: string) => Promise<void>;
   logout: () => Promise<void>;
   /** The server rejected the token (expired or revoked). */
   expire: () => void;
@@ -118,6 +123,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (!res.session_token) throw new ApiError(500, 'server_too_old');
     await persist(serverUrl, res.session_token, res.user);
     set({ status: 'signedIn', serverUrl, token: res.session_token, user: res.user, unreachable: false });
+  },
+
+  changeServer: async (server) => {
+    const serverUrl = normalizeServerUrl(server);
+    const { token } = get();
+    const session = await api<{ authenticated: boolean; user: User | null }>('/api/auth/session', { server: serverUrl, token, timeoutMs: 8000 });
+    if (!session.authenticated || !session.user || !token) throw new ApiError(401, 'session_not_valid');
+    await persist(serverUrl, token, session.user);
+    set({ serverUrl, user: session.user, unreachable: false });
+    if (!session.user.is_guest) loadAccent();
   },
 
   logout: async () => {

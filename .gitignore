@@ -47,5 +47,6 @@ yarn-error.*
 
 # local agent notes and settings (kept out of the public repository)
 AGENTS.md
+DA_FARE.md
 CLAUDE.md
 .claude/

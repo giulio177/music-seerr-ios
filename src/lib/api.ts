@@ -104,7 +104,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
   if (!response.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : `HTTP ${response.status}`;
-    if (response.status === 401 && token && token === currentSession().token) onUnauthorized();
+    if (response.status === 401 && token && token === currentSession().token && server === currentSession().serverUrl) onUnauthorized();
     throw new ApiError(response.status, detail);
   }
   return data as T;
