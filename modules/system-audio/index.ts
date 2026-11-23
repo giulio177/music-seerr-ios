@@ -40,4 +40,3 @@ export const ScrubberView = optionalView<ScrubberProps>('Scrubber');
 export const MenuButtonView = optionalView<MenuButtonProps>('MenuButton');
 export const ContextMenuView = optionalView<ContextMenuProps>('ContextMenu');
 export const SwipeLockView = optionalView<ViewProps>('SwipeLock');
-export const TabBarSearchPinView = optionalView<ViewProps>('TabBarSearchPin');

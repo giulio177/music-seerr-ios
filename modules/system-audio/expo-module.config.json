@@ -9,8 +9,7 @@
       "ScrubberModule",
       "MenuButtonModule",
       "ContextMenuModule",
-      "SwipeLockModule",
-      "TabBarSearchPinModule"
+      "SwipeLockModule"
     ]
   }
 }
