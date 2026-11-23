@@ -29,3 +29,4 @@ export const RoutePickerView = optionalView<RoutePickerProps>('RoutePicker');
 export const ScrubberView = optionalView<ScrubberProps>('Scrubber');
 export const MenuButtonView = optionalView<MenuButtonProps>('MenuButton');
 export const SwipeLockView = optionalView<ViewProps>('SwipeLock');
+export const TabBarSearchPinView = optionalView<ViewProps>('TabBarSearchPin');

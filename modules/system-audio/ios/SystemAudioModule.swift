@@ -384,3 +384,80 @@ final class SwipeLockView: ExpoView, UIGestureRecognizerDelegate {
     true
   }
 }
+
+// MARK: - Search tab prominence when inline
+
+/// Keeps the Search tab inside the unified tab bar pill while expanded and promotes it to its own
+/// trailing button while the bottom accessory is inline (minimized) on iOS 27+.
+public class TabBarSearchPinModule: Module {
+  public func definition() -> ModuleDefinition {
+    Name("TabBarSearchPin")
+
+    View(TabBarSearchPinView.self) {}
+  }
+}
+
+final class TabBarSearchPinView: ExpoView {
+  private weak var observedTabBarController: UITabBarController?
+
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    isUserInteractionEnabled = false
+    if #available(iOS 27.0, *) {
+      registerForTraitChanges([UITraitTabAccessoryEnvironment.self]) { (view: TabBarSearchPinView, _) in
+        view.scheduleSync()
+      }
+    }
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window != nil {
+      scheduleSync()
+    } else if #available(iOS 27.0, *) {
+      let controller = observedTabBarController
+      observedTabBarController = nil
+      DispatchQueue.main.async {
+        guard let controller, controller.bottomAccessory == nil, controller.prominentTabIdentifier != nil else {
+          return
+        }
+        controller.setProminentTabIdentifier(nil, animated: true)
+      }
+    }
+  }
+
+  private func scheduleSync() {
+    DispatchQueue.main.async { [weak self] in
+      self?.syncProminentSearch()
+    }
+  }
+
+  private func syncProminentSearch() {
+    guard #available(iOS 27.0, *), window != nil, let controller = findTabBarController() else { return }
+    observedTabBarController = controller
+    let isInline = traitCollection.tabAccessoryEnvironment == .inline
+    let target: String? = isInline ? controller.tabs.first(where: { $0 is UISearchTab })?.identifier : nil
+    guard controller.prominentTabIdentifier != target else { return }
+    controller.setProminentTabIdentifier(target, animated: true)
+  }
+
+  private func findTabBarController() -> UITabBarController? {
+    var responder: UIResponder? = next
+    while let current = responder {
+      if let controller = current as? UITabBarController { return controller }
+      responder = current.next
+    }
+    return window?.rootViewController.flatMap(Self.firstTabBarController(in:))
+  }
+
+  private static func firstTabBarController(in root: UIViewController) -> UITabBarController? {
+    if let controller = root as? UITabBarController { return controller }
+    for child in root.children {
+      if let controller = firstTabBarController(in: child) { return controller }
+    }
+    if let presented = root.presentedViewController {
+      return firstTabBarController(in: presented)
+    }
+    return nil
+  }
+}

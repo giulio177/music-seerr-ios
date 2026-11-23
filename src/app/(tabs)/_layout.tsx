@@ -38,8 +38,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: 'arrow.down.circle', selected: 'arrow.down.circle.fill' }} />
         <NativeTabs.Trigger.Label>{t('tabs.offline')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      {/* No automatic search activation: the search tab then sits inside the full tab bar and only moves to
-          its own button on the right when the bar minimizes (Apple Music behavior). */}
+      {/* No automatic search activation keeps Search inside the unified tab bar pill on iOS 27+;
+          TabBarSearchPinView in MiniPlayer promotes it to the trailing circle while the player is inline. */}
       <NativeTabs.Trigger contentStyle={backdrop} name="(search)" role="search" disableAutomaticSearchActivation hidden={downloadsOnly}>
         <NativeTabs.Trigger.Label>{t('tabs.search')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
