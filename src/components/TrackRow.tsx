@@ -10,7 +10,7 @@ import { usePlayer } from '@/lib/player';
 import { colors, useAccent } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
 import { Cover, coverCandidateUrls } from './Cover';
-import { ContextMenu, hasNativeContextMenu, Menu, showActionSheet, type MenuItem } from './Menu';
+import { ContextMenu, hasNativeContextMenu, showActionSheet, type MenuItem } from './Menu';
 import { toast } from './Toast';
 
 /** Download state badge: progress ring while downloading, check mark when saved. */
@@ -113,18 +113,15 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: P
           <Text numberOfLines={1} style={[styles.title, current && { color: accent }]}>
             {track.title}
           </Text>
-          <View style={styles.subRow}>
-            <DownloadBadge id={track.id} />
-            <Text numberOfLines={1} style={styles.artist}>
-              {track.artist}
-              {showNumber ? '' : track.album ? ` · ${track.album}` : ''}
-            </Text>
-          </View>
+          <Text numberOfLines={1} style={styles.artist}>
+            {track.artist}
+            {showNumber ? '' : track.album ? ` · ${track.album}` : ''}
+          </Text>
         </View>
-        <Text style={styles.duration}>{formatTime(track.duration_sec)}</Text>
-        <Menu items={items} cancelLabel={t('common.cancel')} accessibilityLabel={t('common.more')} style={styles.more}>
-          <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
-        </Menu>
+        <View style={styles.trailing}>
+          <DownloadBadge id={track.id} />
+          <Text style={styles.duration}>{formatTime(track.duration_sec)}</Text>
+        </View>
       </Pressable>
     </ContextMenu>
   );
@@ -136,9 +133,8 @@ const styles = StyleSheet.create({
   number: { width: 28, textAlign: 'center', color: colors.textSecondary, fontSize: 15, fontVariant: ['tabular-nums'] },
   meta: { flex: 1, minWidth: 0 },
   title: { color: colors.text, fontSize: 16, fontWeight: '500' },
-  subRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  artist: { color: colors.textSecondary, fontSize: 14, flexShrink: 1 },
-  duration: { color: colors.textTertiary, fontSize: 13, fontVariant: ['tabular-nums'] },
-  more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  artist: { color: colors.textSecondary, fontSize: 14, marginTop: 2 },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  duration: { color: colors.textTertiary, fontSize: 13, fontVariant: ['tabular-nums'], minWidth: 36, textAlign: 'right' },
   progress: { fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
 });

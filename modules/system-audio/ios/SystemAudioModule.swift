@@ -760,7 +760,7 @@ final class TabBarSearchPinView: ExpoView {
           guard let controller, controller.bottomAccessory == nil, controller.prominentTabIdentifier != nil else {
             return
           }
-          controller.setProminentTabIdentifier(nil, animated: false)
+          Self.applyProminentTab(nil, on: controller)
         }
       }
     }
@@ -802,9 +802,22 @@ final class TabBarSearchPinView: ExpoView {
     let isInline = observed.traitCollection.tabAccessoryEnvironment == .inline
     let target: String? = isInline ? controller.tabs.first(where: { $0 is UISearchTab })?.identifier : nil
     guard controller.prominentTabIdentifier != target else { return }
-    // Apply synchronously without launching a competing second prominent-tab animation so UIKit
-    // coalesces the change into its own minimize/expand transition.
-    controller.setProminentTabIdentifier(target, animated: false)
+    // Apply synchronously with animations disabled and flush tabBar layout immediately so the
+    // newly detached prominent Search platter lands at its minimized 48x48 circle geometry on
+    // frame 0 instead of morphing from the expanded 62x62 size with a minimized corner radius.
+    Self.applyProminentTab(target, on: controller)
+  }
+
+  @available(iOS 27.0, *)
+  private static func applyProminentTab(_ identifier: String?, on controller: UITabBarController) {
+    UIView.performWithoutAnimation {
+      CATransaction.begin()
+      CATransaction.setDisableActions(true)
+      controller.setProminentTabIdentifier(identifier, animated: false)
+      controller.tabBar.setNeedsLayout()
+      controller.tabBar.layoutIfNeeded()
+      CATransaction.commit()
+    }
   }
 
   private func findTabBarController() -> UITabBarController? {
