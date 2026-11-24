@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@/components/Toast';
 import { api, ApiError } from './api';
+import { useDownloadQueue } from './downloadQueue';
 import type { CatalogTrack, DownloadJob } from './types';
 
 const TERMINAL = new Set(['completed', 'failed', 'interrupted']);
@@ -33,6 +34,7 @@ export function useRequests() {
   const send = async (track: CatalogTrack) => {
     const job = await api<DownloadJob>('/api/download', { method: 'POST', body: { track } });
     setJobs((prev) => ({ ...prev, [track.id]: job }));
+    useDownloadQueue.getState().refresh();
   };
 
   const request = async (track: CatalogTrack) => {

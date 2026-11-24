@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
+import { DownloadQueue } from '@/components/DownloadQueue';
 import { TrackRow } from '@/components/TrackRow';
 import { EmptyState, ErrorState, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useDownloadQueue } from '@/lib/downloadQueue';
 import { usePlayer } from '@/lib/player';
 import { useRequests } from '@/lib/requests';
 import { colors } from '@/lib/theme';
@@ -24,6 +26,7 @@ export default function Search() {
   const [error, setError] = useState<ApiError | null>(null);
   const { jobs, request } = useRequests();
   const seq = useRef(0);
+  const queueShown = useDownloadQueue((s) => s.jobs.length + s.finished.length > 0);
 
   const run = async (q: string) => {
     const id = ++seq.current;
@@ -88,13 +91,20 @@ export default function Search() {
           contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
-          ListHeaderComponent={loading ? <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} /> : undefined}
+          ListHeaderComponent={
+            loading ? (
+              <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} />
+            ) : !results && !isGuest ? (
+              // Before a search: this account's download requests and their progress.
+              <DownloadQueue />
+            ) : undefined
+          }
           ListEmptyComponent={
             loading ? undefined : error ? (
               <ErrorState error={error} onRetry={() => run(query)} />
-            ) : (
+            ) : results || !queueShown ? (
               <EmptyState icon="search" body={results ? t('search.noResults') : t('search.hint')} />
-            )
+            ) : undefined
           }
           renderItem={({ item, section, index }) =>
             section.key === 'library' ? (

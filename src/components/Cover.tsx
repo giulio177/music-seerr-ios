@@ -6,8 +6,20 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { absoluteUrl, authHeaders, serverPath } from '@/lib/api';
 import { radius } from '@/lib/theme';
 
-/** Artwork URLs that failed this launch (songs without a cover): not requested again on every mount. */
-const missing = new Set<string>();
+/**
+ * Artwork URLs that failed recently (songs without a cover): not requested again on every mount, but tried
+ * again after a while, since Jellyfin adds the artwork of a song just added to the library a little later.
+ */
+const failedAt = new Map<string, number>();
+const RETRY_MS = 2 * 60 * 1000;
+
+function recentlyFailed(uri: string) {
+  const at = failedAt.get(uri);
+  if (at === undefined) return false;
+  if (Date.now() - at < RETRY_MS) return true;
+  failedAt.delete(uri);
+  return false;
+}
 
 /** Ordered candidate artwork URIs for native previews (local file first, then server/fallback). */
 export function coverCandidateUrls(path?: string | null, local?: string | null, fallback?: string | null): string[] {
@@ -18,7 +30,7 @@ export function coverCandidateUrls(path?: string | null, local?: string | null, 
       const server = serverPath(uri);
       return server ? absoluteUrl(server) : uri;
     })
-    .filter((uri) => !missing.has(uri));
+    .filter((uri) => !recentlyFailed(uri));
 }
 
 /**
@@ -54,7 +66,7 @@ export function Cover({
       const server = serverPath(uri);
       return server ? { uri: absoluteUrl(server), headers: authHeaders(), cacheKey: server } : { uri };
     })
-    .find((candidate) => !failed.includes(candidate.uri) && !missing.has(candidate.uri));
+    .find((candidate) => !failed.includes(candidate.uri) && !recentlyFailed(candidate.uri));
   const box = { width: size, height: size, borderRadius };
   const art = (
     <View style={[box, { overflow: 'hidden' }, shadow ? null : style]}>
@@ -70,7 +82,7 @@ export function Cover({
           cachePolicy="disk"
           recyclingKey={source.uri}
           onError={() => {
-            if (!source.uri.startsWith('file:')) missing.add(source.uri);
+            if (!source.uri.startsWith('file:')) failedAt.set(source.uri, Date.now());
             setFailed((prev) => [...prev, source.uri]);
           }}
         />

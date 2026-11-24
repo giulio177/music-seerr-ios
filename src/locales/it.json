@@ -108,7 +108,8 @@
       "jellyfin_sync": "Aggiunta alla libreria",
       "completed": "In libreria",
       "failed": "Non riuscito",
-      "interrupted": "Interrotto"
+      "interrupted": "Interrotto",
+      "cancelled": "Annullato"
     },
     "requestFailed": "La richiesta non è riuscita."
   },
@@ -213,5 +214,14 @@
     "playingOn": "In riproduzione su {{name}}",
     "playingElsewhere": "In riproduzione su un altro dispositivo",
     "playHere": "Riproduci su questo iPhone"
+  },
+  "queue": {
+    "title": "Coda download",
+    "running_one": "{{count}} in corso",
+    "running_other": "{{count}} in corso",
+    "cancel": "Annulla download",
+    "retry": "Riprova",
+    "dismiss": "Rimuovi dalla coda",
+    "actionFailed": "Il server non è raggiungibile."
   }
 }

@@ -307,21 +307,22 @@ const crossfade = {
 
 const artDir = new Directory(Paths.cache, 'art');
 
-/** Songs whose server artwork is missing; asked once per launch. */
-const noArtwork = new Set<string>();
+/** Songs whose server artwork was missing, and when: asked again after a while (new songs get it later). */
+const noArtwork = new Map<string, number>();
+const ARTWORK_RETRY_MS = 2 * 60 * 1000;
 
 /**
  * The lock screen loads artwork without auth headers, so server covers are cached to disk first.
  */
 async function artworkFor(item: QueueItem): Promise<string | undefined> {
   if (item.coverLocal) return item.coverLocal;
-  if (!item.cover || noArtwork.has(item.id)) return undefined;
+  if (!item.cover || Date.now() - (noArtwork.get(item.id) ?? 0) < ARTWORK_RETRY_MS) return undefined;
   if (item.kind === 'preview') return item.cover;
   try {
     if (!artDir.exists) artDir.create({ intermediates: true });
     const file = new File(artDir, `${item.id}.jpg`);
     if (!file.exists && !(await saveArtwork([item.cover, item.coverFallback], file))) {
-      noArtwork.add(item.id);
+      noArtwork.set(item.id, Date.now());
       return undefined;
     }
     return file.uri;

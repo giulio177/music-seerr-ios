@@ -50,6 +50,7 @@ export type DownloadJob = {
   status: 'pending' | 'downloading' | 'tagging' | 'moving' | 'jellyfin_sync' | 'completed' | 'failed' | 'interrupted' | string;
   progress: number;
   message?: string | null;
+  created_at?: number;
 };
 
 export type Lyrics = { found: boolean; synced?: string | null; plain?: string | null };

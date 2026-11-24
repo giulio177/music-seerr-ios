@@ -108,7 +108,8 @@
       "jellyfin_sync": "Adding to library",
       "completed": "In library",
       "failed": "Failed",
-      "interrupted": "Interrupted"
+      "interrupted": "Interrupted",
+      "cancelled": "Cancelled"
     },
     "requestFailed": "The request failed."
   },
@@ -213,5 +214,14 @@
     "playingOn": "Playing on {{name}}",
     "playingElsewhere": "Playing on another device",
     "playHere": "Play on this iPhone"
+  },
+  "queue": {
+    "title": "Download queue",
+    "running_one": "{{count}} in progress",
+    "running_other": "{{count}} in progress",
+    "cancel": "Cancel download",
+    "retry": "Try again",
+    "dismiss": "Remove from the queue",
+    "actionFailed": "The server could not be reached."
   }
 }
