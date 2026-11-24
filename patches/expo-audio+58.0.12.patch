@@ -1,0 +1,43 @@
+diff --git a/node_modules/expo-audio/ios/AudioPlaylist.swift b/node_modules/expo-audio/ios/AudioPlaylist.swift
+index 38e158f..ac3e6e5 100644
+--- a/node_modules/expo-audio/ios/AudioPlaylist.swift
++++ b/node_modules/expo-audio/ios/AudioPlaylist.swift
+@@ -155,7 +155,7 @@ public class AudioPlaylist: SharedRef<AVQueuePlayer>, Playable, LockScreenPlayab
+   func seekTo(seconds: Double) async {
+     let time = CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+     await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+-      ref.seek(to: time) { [weak self] _ in
++      ref.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+         if let self {
+           self.updateStatus(with: ["currentTime": self.currentTime])
+         }
+diff --git a/node_modules/expo-audio/ios/AudioUtils.swift b/node_modules/expo-audio/ios/AudioUtils.swift
+index 41f63da..f07ec94 100644
+--- a/node_modules/expo-audio/ios/AudioUtils.swift
++++ b/node_modules/expo-audio/ios/AudioUtils.swift
+@@ -86,9 +86,10 @@ struct AudioUtils {
+       url
+     }
+ 
+-    var options: [String: Any]?
++    // Precise timing: seeks in VBR MP3 land where they report, instead of an estimate seconds away.
++    var options: [String: Any] = [AVURLAssetPreferPreciseDurationAndTimingKey: true]
+     if let headers = source.headers {
+-      options = ["AVURLAssetHTTPHeaderFieldsKey": headers]
++      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
+     }
+ 
+     let asset = AVURLAsset(url: finalUrl, options: options)
+diff --git a/node_modules/expo-audio/ios/MediaController.swift b/node_modules/expo-audio/ios/MediaController.swift
+index 9b66e45..8e44fad 100644
+--- a/node_modules/expo-audio/ios/MediaController.swift
++++ b/node_modules/expo-audio/ios/MediaController.swift
+@@ -337,7 +337,7 @@ class MediaController {
+       }
+ 
+       let seekTime = MediaController.cmTime(seconds: event.positionTime)
+-      playable.lockScreenPlayer.seek(to: seekTime)
++      playable.lockScreenPlayer.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero)
+ 
+       return .success
+     }

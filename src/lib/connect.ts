@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { useAuth } from './auth';
+import { usePreferences } from './preferences';
 import { usePlayer, setRemoteSender, type PlaybackSnapshot, type QueueItem, type RemoteAction, type RepeatMode } from './player';
 import type { LibraryTrack } from './types';
 
@@ -271,6 +272,11 @@ function onMessage(raw: string) {
       usePlayer.getState().release(deviceName(active && active !== deviceId ? active : null));
       break;
     }
+    case 'welcome':
+    case 'preferences':
+      // Changed on another device (crossfade, accent), or possibly while this iPhone was away.
+      usePreferences.getState().sync();
+      break;
     case 'granted': {
       if (Array.isArray(message.queue)) serverQueue = message.queue;
       if (message.state) serverState = { ...message.state, position: message.position, active: deviceId };
