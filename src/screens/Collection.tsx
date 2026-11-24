@@ -41,6 +41,7 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
   const unreachable = useAuth((s) => s.unreachable);
   const localOnly = !!downloaded;
   const { data, error, loading, refreshing, refresh, reload } = useApi<Response>(localOnly ? null : PATHS[kind](id));
+  const revision = usePlaylists((s) => (kind === 'playlist' ? (s.revisions[id] ?? 0) : 0));
   const catalogPath = !localOnly && !unreachable && data && kind !== 'playlist' ? `/api/jellyfin/${kind}/${id}/catalog` : null;
   const catalog = useApi<{ missing?: ReleaseTrack[]; releases?: Release[] }>(catalogPath);
   const savedTracks = useOffline((s) => s.tracks);
@@ -62,6 +63,12 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
     const info: Info = kind === 'album' ? { name: rows[0].album, artist: rows[0].artist, artist_id: rows[0].artist_id } : { name: rows[0].artist };
     return { tracks: rows.map(offlineToLibrary), info };
   }, [localOnly, error, savedTracks, savedPlaylist, kind, id]);
+
+  // A song removed from this playlist (here or in the player) reloads the page.
+  useEffect(() => {
+    if (revision) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revision]);
 
   useEffect(() => {
     if (kind === 'playlist' && data?.playlist?.name) {
@@ -127,7 +134,8 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
   const pending = tracks.filter((tr) => active[tr.id] !== undefined && active[tr.id] !== 'error').length;
   const allSaved = tracks.length > 0 && savedCount === tracks.length;
 
-  const play = (index: number, shuffle = false) => usePlayer.getState().playTracks(tracks, index, { shuffle });
+  const editablePlaylist = kind === 'playlist' && !local ? id : null;
+  const play = (index: number, shuffle = false) => usePlayer.getState().playTracks(tracks, index, { shuffle, playlistId: editablePlaylist });
 
   if (loading) {
     return (
@@ -266,7 +274,7 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
           ) : row.type === 'missing' ? (
             <MissingRow track={row.track} job={jobs[row.track.id]} onRequest={() => request(row.track)} />
           ) : (
-            <TrackRow track={row.track} showNumber={kind === 'album'} onPress={() => play(row.index)} />
+            <TrackRow track={row.track} showNumber={kind === 'album'} playlistId={editablePlaylist} onPress={() => play(row.index)} />
           )
         }
       />

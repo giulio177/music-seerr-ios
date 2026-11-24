@@ -32,12 +32,28 @@ type PlaylistState = {
   refresh: () => Promise<void>;
   /** Updates one playlist after its page loaded online. */
   remember: (playlist: SavedPlaylist) => void;
+  /** Bumped when a playlist changes here, so its open page reloads. */
+  revisions: Record<string, number>;
+  /** Removes one entry from the Jellyfin playlist (throws `ApiError`). */
+  removeEntry: (playlistId: string, track: LibraryTrack) => Promise<void>;
 };
 
 let running: Promise<void> | null = null;
 
 export const usePlaylists = create<PlaylistState>((set, get) => ({
   playlists: read(),
+  revisions: {},
+  removeEntry: async (playlistId, track) => {
+    if (!track.playlist_entry_id) return;
+    await api(`/api/jellyfin/playlist/${playlistId}/items/${encodeURIComponent(track.playlist_entry_id)}`, { method: 'DELETE' });
+    const playlists = get().playlists.map((p) => {
+      if (p.id !== playlistId) return p;
+      const at = p.track_ids.indexOf(track.id);
+      return at < 0 ? p : { ...p, track_ids: p.track_ids.filter((_, i) => i !== at) };
+    });
+    set({ playlists, revisions: { ...get().revisions, [playlistId]: (get().revisions[playlistId] ?? 0) + 1 } });
+    save(playlists);
+  },
   remember: (playlist) => {
     const current = get().playlists;
     const old = current.find((p) => p.id === playlist.id);

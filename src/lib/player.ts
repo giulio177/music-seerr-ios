@@ -1,8 +1,9 @@
-import { createAudioPlaylist, setAudioModeAsync, type AudioPlaylist, type AudioSource } from 'expo-audio';
+import { createAudioPlayer, createAudioPlaylist, setAudioModeAsync, type AudioPlayer, type AudioPlaylist, type AudioSource } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import { create } from 'zustand';
 import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
 import { localAudioUri, localCoverUri, saveArtwork, streamPath, supportDir, useOffline } from './offline';
+import { usePreferences } from './preferences';
 import type { CatalogTrack, LibraryTrack } from './types';
 
 export type QueueItem = {
@@ -25,6 +26,8 @@ export type QueueItem = {
   library?: LibraryTrack;
   /** Original position, used to undo shuffle. */
   order: number;
+  /** Jellyfin playlist the song was played from (its menu can remove it there). */
+  playlistId?: string | null;
 };
 
 export type RepeatMode = 'none' | 'all' | 'single';
@@ -38,7 +41,7 @@ type PlayerState = {
   duration: number;
   repeat: RepeatMode;
   shuffle: boolean;
-  playTracks: (tracks: LibraryTrack[], start?: number, options?: { shuffle?: boolean }) => void;
+  playTracks: (tracks: LibraryTrack[], start?: number, options?: { shuffle?: boolean; playlistId?: string | null }) => void;
   playPreview: (track: CatalogTrack) => void;
   playNext: (track: LibraryTrack) => void;
   addToQueue: (track: LibraryTrack) => void;
@@ -51,6 +54,8 @@ type PlayerState = {
   cycleRepeat: () => void;
   toggleShuffle: () => void;
   stop: () => void;
+  /** A playlist entry was removed: its queue items no longer offer the removal. */
+  forgetPlaylistEntry: (entryId: string) => void;
   /** Brings back the last session's queue, paused, so the mini player shows the last song (like Apple Music). */
   restore: () => void;
 };
@@ -68,7 +73,7 @@ function nextKey() {
   return `q${keySeq}`;
 }
 
-function fromLibrary(track: LibraryTrack, order: number): QueueItem {
+function fromLibrary(track: LibraryTrack, order: number, playlistId?: string | null): QueueItem {
   const offline = useOffline.getState().tracks[track.id];
   return {
     key: nextKey(),
@@ -85,6 +90,7 @@ function fromLibrary(track: LibraryTrack, order: number): QueueItem {
     kind: 'library',
     library: track,
     order,
+    playlistId: playlistId ?? null,
   };
 }
 
@@ -111,6 +117,7 @@ function getPlaylist() {
     playlist = createAudioPlaylist({ loop: 'none', updateInterval: 500 });
     playlist.addListener('playlistStatusUpdate', (status) => {
       tracker.tick(status.currentTime, status.playing);
+      crossfade.check(status.currentTime, status.duration, status.playing, status.isBuffering, status.currentIndex);
       usePlayer.setState({
         playing: status.playing,
         buffering: status.isBuffering,
@@ -129,6 +136,112 @@ function getPlaylist() {
   }
   return playlist;
 }
+
+// --- Crossfade -------------------------------------------------------------
+
+/** Starts the outgoing tail this many seconds before the fade, so the second player has loaded. */
+const PRELOAD_SECONDS = 10;
+const FADE_STEP_MS = 50;
+
+/**
+ * Crossfade with the single-queue native player: near the end of a song a second player loads the same
+ * source, takes over its last seconds and fades out while the queue moves to the next song and fades in.
+ */
+const crossfade = {
+  tail: null as AudioPlayer | null,
+  tailKey: null as string | null,
+  timer: null as ReturnType<typeof setInterval> | null,
+  starting: false,
+
+  get active() {
+    return this.starting || this.timer !== null;
+  },
+
+  seconds() {
+    return usePreferences.getState().prefs?.crossfade_seconds ?? 0;
+  },
+
+  /** Called on every status update of the queue player. */
+  check(time: number, duration: number, playing: boolean, buffering: boolean, index: number) {
+    // Paused during a fade (lock screen, headphones): stop the tail with it.
+    if (this.timer !== null && !playing && !buffering) return this.dispose();
+    if (this.active || !playlist) return;
+    const seconds = this.seconds();
+    const { queue, repeat } = usePlayer.getState();
+    const item = queue[index];
+    const hasNext = index < queue.length - 1 || (repeat === 'all' && queue.length > 1);
+    if (!seconds || !playing || !item || item.kind !== 'library' || repeat === 'single' || !hasNext || duration < seconds * 3) {
+      if (this.tail && this.tailKey !== item?.key) this.dispose();
+      return;
+    }
+    const remaining = duration - time;
+    if (remaining > seconds + PRELOAD_SECONDS) {
+      if (this.tail) this.dispose();
+      return;
+    }
+    if (this.tailKey !== item.key) {
+      this.dispose();
+      this.tail = createAudioPlayer(sourceFor(item), { updateInterval: 1000, keepAudioSessionActive: true });
+      this.tailKey = item.key;
+    }
+    if (remaining <= seconds && remaining > 0.5) this.start(item.key, remaining);
+  },
+
+  async start(key: string, remaining: number) {
+    const tail = this.tail;
+    const pl = playlist;
+    if (!tail || !pl || !tail.isLoaded) return;
+    this.starting = true;
+    try {
+      // Seek a little ahead, then start the tail when the queue player reaches that spot.
+      const target = pl.currentTime + 0.3;
+      tail.volume = 1;
+      await tail.seekTo(target);
+      if (!this.starting || this.tail !== tail || usePlayer.getState().queue[pl.currentIndex]?.key !== key || !pl.playing) {
+        this.starting = false;
+        return;
+      }
+      const wait = (target - pl.currentTime) * 1000;
+      if (wait > 0 && wait < 1000) await new Promise((resolve) => setTimeout(resolve, wait));
+      if (!this.starting || this.tail !== tail) return;
+      tail.play();
+      pl.volume = 0;
+      pl.next();
+    } catch {
+      this.starting = false;
+      this.dispose();
+      return;
+    }
+    this.starting = false;
+    const fade = Math.max(1, remaining - 0.3) * 1000;
+    const began = Date.now();
+    this.timer = setInterval(() => {
+      const progress = Math.min(1, (Date.now() - began) / fade);
+      // Equal power: the overall loudness holds through the fade.
+      tail.volume = Math.cos((progress * Math.PI) / 2);
+      if (playlist) playlist.volume = Math.sin((progress * Math.PI) / 2);
+      if (progress >= 1) this.dispose();
+    }, FADE_STEP_MS);
+  },
+
+  /** Ends any fade at once: the queue player back at full volume, the tail stopped and released. */
+  dispose() {
+    this.starting = false;
+    if (this.timer !== null) clearInterval(this.timer);
+    this.timer = null;
+    if (this.tail) {
+      try {
+        this.tail.pause();
+        this.tail.remove();
+      } catch {
+        // Already released.
+      }
+    }
+    this.tail = null;
+    this.tailKey = null;
+    if (playlist) playlist.volume = 1;
+  },
+};
 
 // --- Lock screen artwork ---------------------------------------------------
 
@@ -239,6 +352,7 @@ function onTrackStart() {
 // --- Queue editing ---------------------------------------------------------
 
 function load(items: QueueItem[], start: number) {
+  crossfade.dispose();
   const pl = getPlaylist();
   pl.pause();
   pl.clear();
@@ -281,7 +395,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   playTracks: (tracks, start = 0, options) => {
     if (!tracks.length) return;
-    let items = tracks.map(fromLibrary);
+    let items = tracks.map((track, order) => fromLibrary(track, order, options?.playlistId));
     let first = Math.max(0, Math.min(start, items.length - 1));
     const shuffle = options?.shuffle ?? false;
     if (shuffle) {
@@ -345,6 +459,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   skipTo: (i) => {
+    crossfade.dispose();
     const pl = getPlaylist();
     pl.skipTo(i);
     pl.play();
@@ -354,6 +469,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     const pl = getPlaylist();
     if (!get().queue.length) return;
     if (pl.playing) {
+      crossfade.dispose();
       pl.pause();
       tracker.flush();
       saveSession();
@@ -373,9 +489,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     }
   },
 
-  next: () => getPlaylist().next(),
+  next: () => {
+    // During a fade the queue already moved on: just finish the fade.
+    if (crossfade.active) return crossfade.dispose();
+    getPlaylist().next();
+  },
 
   previous: () => {
+    crossfade.dispose();
     const pl = getPlaylist();
     if (pl.currentTime > 3 || pl.currentIndex === 0) pl.seekTo(0);
     else pl.previous();
@@ -388,6 +509,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       set({ position: seconds });
       return;
     }
+    crossfade.dispose();
     tracker.lastTime = seconds;
     getPlaylist().seekTo(seconds);
   },
@@ -407,6 +529,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   stop: () => {
+    crossfade.dispose();
     tracker.flush();
     if (playlist) {
       playlist.pause();
@@ -419,12 +542,18 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ queue: [], index: 0, playing: false, position: 0, duration: 0 });
   },
 
+  forgetPlaylistEntry: (entryId) => {
+    const { queue } = get();
+    if (!queue.some((item) => item.playlistId && item.library?.playlist_entry_id === entryId)) return;
+    set({ queue: queue.map((item) => (item.playlistId && item.library?.playlist_entry_id === entryId ? { ...item, playlistId: null } : item)) });
+  },
+
   restore: () => {
     if (get().queue.length) return;
     const saved = readSession();
     if (!saved) return;
     let order = 0;
-    const items = saved.tracks.map((track) => fromLibrary(track, order++));
+    const items = saved.tracks.map((track, i) => fromLibrary(track, order++, saved.playlists?.[i]));
     const index = Math.min(saved.index, items.length - 1);
     const pl = getPlaylist();
     for (const item of items) pl.add(sourceFor(item));
@@ -458,7 +587,15 @@ useOffline.subscribe((state, prev) => {
 
 // --- Last session (restored at launch) --------------------------------------
 
-type SavedSession = { tracks: LibraryTrack[]; index: number; position: number; repeat: RepeatMode; shuffle: boolean };
+type SavedSession = {
+  tracks: LibraryTrack[];
+  /** Playlist each song was played from, by position in `tracks`. */
+  playlists?: (string | null)[];
+  index: number;
+  position: number;
+  repeat: RepeatMode;
+  shuffle: boolean;
+};
 
 const sessionFile = new File(supportDir, 'player.json');
 
@@ -468,11 +605,13 @@ function saveSession() {
     const { queue, index, position, repeat, shuffle } = usePlayer.getState();
     const current = queue[index];
     const tracks: LibraryTrack[] = [];
+    const playlists: (string | null)[] = [];
     let savedIndex = 0;
     for (const item of queue) {
       if (item.kind !== 'library' || !item.library) continue;
       if (item.key === current?.key) savedIndex = tracks.length;
       tracks.push(item.library);
+      playlists.push(item.playlistId ?? null);
     }
     if (!tracks.length) {
       if (sessionFile.exists) sessionFile.delete();
@@ -480,6 +619,7 @@ function saveSession() {
     }
     const session: SavedSession = {
       tracks,
+      playlists,
       index: savedIndex,
       position: current?.kind === 'library' ? Math.floor(position) : 0,
       repeat,

@@ -112,7 +112,7 @@ function Row({
 }) {
   const body = (
     <>
-      <Text style={[styles.rowLabel, danger && { color: colors.danger }]} numberOfLines={1}>
+      <Text style={[styles.rowLabel, value === undefined && styles.rowLabelFill, danger && { color: colors.danger }]} numberOfLines={value === undefined ? 2 : 1}>
         {label}
       </Text>
       {value !== undefined ? (
@@ -537,6 +537,7 @@ const styles = StyleSheet.create({
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
   pressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
   rowLabel: { color: colors.text, fontSize: 16, flexShrink: 0, maxWidth: '55%' },
+  rowLabelFill: { flex: 1, flexShrink: 1, maxWidth: undefined },
   rowValue: { flex: 1, color: colors.textSecondary, fontSize: 15, textAlign: 'right' },
   field: { paddingVertical: 10, paddingRight: 16, gap: 6 },
   fieldLabel: { color: colors.textSecondary, fontSize: 13 },

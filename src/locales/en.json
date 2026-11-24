@@ -83,7 +83,12 @@
     "goToAlbum": "Go to album",
     "goToArtist": "Go to artist",
     "addedToQueue": "Added to the queue",
-    "playingNext": "Plays next"
+    "playingNext": "Plays next",
+    "removeFromPlaylist": "Remove from playlist",
+    "removedFromPlaylist": "Removed from the playlist",
+    "removeFromPlaylistFailed": "Could not remove the song from the playlist",
+    "playlistNotYours": "You can only edit your own playlists",
+    "playlistOffline": "The server is not reachable"
   },
   "search": {
     "placeholder": "Songs, artists, albums",

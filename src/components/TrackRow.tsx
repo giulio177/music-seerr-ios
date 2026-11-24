@@ -4,9 +4,10 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from '@/lib/format';
-import { albumCoverPath, authHeaders } from '@/lib/api';
+import { albumCoverPath, ApiError, authHeaders } from '@/lib/api';
 import { localCoverUri, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { usePlaylists } from '@/lib/playlists';
 import { colors, useAccent } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
 import { Cover, coverCandidateUrls } from './Cover';
@@ -29,9 +30,9 @@ export function DownloadBadge({ id }: { id: string }) {
 export function trackMenuItems(
   track: LibraryTrack,
   t: (key: string) => string,
-  options: { queue?: boolean; navigate?: (path: string) => void } = {},
+  options: { queue?: boolean; navigate?: (path: string) => void; /** The Jellyfin playlist the song was listed or played from. */ playlistId?: string | null } = {},
 ): MenuItem[] {
-  const { queue = true, navigate = (path: string) => router.push(path as never) } = options;
+  const { queue = true, navigate = (path: string) => router.push(path as never), playlistId } = options;
   const offline = useOffline.getState();
   const saved = !!offline.tracks[track.id];
   const items: MenuItem[] = [];
@@ -68,6 +69,25 @@ export function trackMenuItems(
       ? { id: 'remove', title: t('track.removeDownload'), systemImage: 'xmark.circle', destructive: true, group: 2, run: () => offline.remove(track.id) }
       : { id: 'download', title: t('track.download'), systemImage: 'arrow.down.circle', group: 2, run: () => offline.download([track]) },
   );
+  if (playlistId && track.playlist_entry_id) {
+    items.push({
+      id: 'removeFromPlaylist',
+      title: t('track.removeFromPlaylist'),
+      systemImage: 'minus.circle',
+      destructive: true,
+      group: 2,
+      run: async () => {
+        try {
+          await usePlaylists.getState().removeEntry(playlistId, track);
+          usePlayer.getState().forgetPlaylistEntry(track.playlist_entry_id!);
+          toast(t('track.removedFromPlaylist'));
+        } catch (error) {
+          const status = error instanceof ApiError ? error.status : 500;
+          toast(t(status === 403 || status === 409 ? 'track.playlistNotYours' : status === 0 ? 'track.playlistOffline' : 'track.removeFromPlaylistFailed'));
+        }
+      },
+    });
+  }
   return items;
 }
 
@@ -76,16 +96,18 @@ type Props = {
   onPress: () => void;
   /** Album lists show the track number instead of the cover. */
   showNumber?: boolean;
+  /** Set on a playlist page: the menu offers to remove the song from it. */
+  playlistId?: string | null;
 };
 
-export const TrackRow = memo(function TrackRow({ track, onPress, showNumber }: Props) {
+export const TrackRow = memo(function TrackRow({ track, onPress, showNumber, playlistId }: Props) {
   const { t } = useTranslation();
   const current = usePlayer((s) => s.queue[s.index]?.id === track.id);
   const offline = useOffline((s) => s.tracks[track.id]);
   const { accent } = useAccent();
   const localCover = offline ? localCoverUri(offline) : null;
   const fallbackCover = albumCoverPath(track.album_id);
-  const items = trackMenuItems(track, t);
+  const items = trackMenuItems(track, t, { playlistId });
   const previewImages = coverCandidateUrls(track.cover_url, localCover, fallbackCover);
 
   return (

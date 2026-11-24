@@ -83,7 +83,12 @@
     "goToAlbum": "Vai all'album",
     "goToArtist": "Vai all'artista",
     "addedToQueue": "Aggiunto alla coda",
-    "playingNext": "Riprodotto dopo"
+    "playingNext": "Riprodotto dopo",
+    "removeFromPlaylist": "Rimuovi dalla playlist",
+    "removedFromPlaylist": "Rimosso dalla playlist",
+    "removeFromPlaylistFailed": "Impossibile rimuovere il brano dalla playlist",
+    "playlistNotYours": "Puoi modificare solo le tue playlist",
+    "playlistOffline": "Il server non è raggiungibile"
   },
   "search": {
     "placeholder": "Brani, artisti, album",

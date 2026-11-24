@@ -153,7 +153,7 @@ function MoreButton({ item }: { item: QueueItem }) {
   // Rebuilt on open by the native menu; the download state is read when the item renders.
   const saved = useOffline((s) => !!s.tracks[item.id]);
   if (item.kind !== 'library' || !item.library) return null;
-  const items = trackMenuItems(item.library, t, { queue: false, navigate: goTo });
+  const items = trackMenuItems(item.library, t, { queue: false, navigate: goTo, playlistId: item.playlistId });
   return (
     <Menu key={String(saved)} items={items} cancelLabel={t('common.cancel')} title={item.title} accessibilityLabel={t('common.more')} style={styles.more}>
       <Symbol name="ellipsis" fallback="ellipsis-horizontal" size={18} color={colors.text} />
