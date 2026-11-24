@@ -9,6 +9,7 @@ import { ToastHost } from '@/components/Toast';
 import { Backdrop } from '@/components/ui';
 import { applySavedLanguage } from '@/lib/language';
 import { useAuth } from '@/lib/auth';
+import { startConnect } from '@/lib/connect';
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { colors } from '@/lib/theme';
@@ -42,6 +43,8 @@ export default function RootLayout() {
       // After the session (stream URLs need the server and token): bring back the last song, paused.
       .then(() => {
         if (useAuth.getState().status === 'signedIn') usePlayer.getState().restore();
+        // Then share playback with the account's other devices (web app, other iPhones).
+        startConnect();
       })
       .catch((error) => console.error('[startup] player', error));
     // Never leave the splash screen up, whatever happens during startup.

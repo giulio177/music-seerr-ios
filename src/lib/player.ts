@@ -58,6 +58,18 @@ type PlayerState = {
   forgetPlaylistEntry: (entryId: string) => void;
   /** Brings back the last session's queue, paused, so the mini player shows the last song (like Apple Music). */
   restore: () => void;
+  /** Name of the device that plays the audio when it is not this iPhone (the player then mirrors it). */
+  remote: string | null;
+  setRepeat: (mode: RepeatMode) => void;
+  setShuffle: (on: boolean) => void;
+  /** Shows another device's playback; no audio here. */
+  mirror: (snapshot: PlaybackSnapshot, deviceName: string) => void;
+  /** No device plays: loads the shared state here, paused. */
+  adopt: (snapshot: PlaybackSnapshot) => void;
+  /** Takes the audio from the other device and plays from where it was. */
+  takeOver: (snapshot: PlaybackSnapshot) => void;
+  /** Another device took the audio: stops here. */
+  release: (deviceName: string) => void;
 };
 
 let playlist: AudioPlaylist | null = null;
@@ -397,18 +409,114 @@ function onTrackStart() {
   tracker.start(item);
 }
 
+// --- Shared playback with the account's other devices (see connect.ts) ------
+
+/** A playback state shared between devices: library songs only. */
+export type PlaybackSnapshot = {
+  tracks: (LibraryTrack & { playlist_id?: string | null })[];
+  index: number;
+  position: number;
+  playing: boolean;
+  repeat: RepeatMode;
+  shuffle: boolean;
+};
+
+export type RemoteAction =
+  | 'play'
+  | 'pause'
+  | 'toggle'
+  | 'next'
+  | 'previous'
+  | 'seek'
+  | 'skipTo'
+  | 'playTracks'
+  | 'playNext'
+  | 'addToQueue'
+  | 'removeAt'
+  | 'repeat'
+  | 'shuffle';
+
+/** Sends a command to the device that plays the audio; set by connect.ts. */
+let sendRemote: ((action: RemoteAction, args?: Record<string, unknown>) => void) | null = null;
+
+export function setRemoteSender(sender: typeof sendRemote) {
+  sendRemote = sender;
+}
+
+/** True while another device plays the audio: the controls here steer it (a local preview stays local). */
+function remoteControlled() {
+  const { remote, queue, index } = usePlayer.getState();
+  return !!sendRemote && remote !== null && queue[index]?.kind !== 'preview';
+}
+
+function remote(action: RemoteAction, args?: Record<string, unknown>) {
+  sendRemote?.(action, args);
+}
+
+/** The native player holds the queue (false while mirroring another device). */
+let nativeLoaded = false;
+
+/** Stops the local audio and empties the native queue; the shown state is left as it is. */
+function unloadNative() {
+  crossfade.dispose();
+  tracker.flush();
+  if (playlist) {
+    playlist.pause();
+    playlist.clear();
+    if (lockScreenActive) playlist.clearLockScreenControls();
+    lockScreenActive = false;
+  }
+  nativeLoaded = false;
+  pendingSeek = null;
+  restoredIdle = false;
+}
+
+function snapshotItems(snapshot: PlaybackSnapshot) {
+  return snapshot.tracks.map((track, order) => fromLibrary(track, order, track.playlist_id));
+}
+
+function sameQueue(items: QueueItem[], tracks: LibraryTrack[]) {
+  return items.length === tracks.length && items.every((item, i) => item.kind === 'library' && item.id === tracks[i].id);
+}
+
+/** Loads a queue paused at a position; the first play starts there (like a restored session). */
+function loadPaused(items: QueueItem[], index: number, position: number, repeat: RepeatMode, shuffle: boolean) {
+  unloadNative();
+  const pl = getPlaylist();
+  for (const item of items) pl.add(sourceFor(item));
+  if (items.length) pl.skipTo(index);
+  pl.loop = repeat;
+  nativeLoaded = items.length > 0;
+  pendingSeek = position > 0 ? position : null;
+  restoredIdle = true;
+  usePlayer.setState({
+    queue: items,
+    index,
+    position,
+    duration: items[index]?.duration ?? 0,
+    repeat,
+    shuffle,
+    playing: false,
+    buffering: false,
+  });
+}
+
 // --- Queue editing ---------------------------------------------------------
 
-function load(items: QueueItem[], start: number) {
+function load(items: QueueItem[], start: number, startAt = 0) {
   crossfade.dispose();
   const pl = getPlaylist();
   pl.pause();
   pl.clear();
   for (const item of items) pl.add(sourceFor(item));
-  usePlayer.setState({ queue: items, index: start, position: 0, duration: items[start]?.duration ?? 0 });
+  nativeLoaded = items.length > 0;
+  pendingSeek = null;
+  restoredIdle = false;
+  usePlayer.setState({ queue: items, index: start, position: startAt, duration: items[start]?.duration ?? 0, remote: null });
   ensureAudioMode().then(() => {
     pl.skipTo(start);
     pl.play();
+    if (startAt > 0) pl.seekTo(startAt);
     onTrackStart();
   });
 }
@@ -431,6 +539,8 @@ function shuffled<T>(items: T[]) {
   return copy;
 }
 
+const REPEAT_ORDER: RepeatMode[] = ['none', 'all', 'single'];
+
 export const usePlayer = create<PlayerState>((set, get) => ({
   queue: [],
   index: 0,
@@ -440,9 +550,13 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   duration: 0,
   repeat: 'none',
   shuffle: false,
+  remote: null,
 
   playTracks: (tracks, start = 0, options) => {
     if (!tracks.length) return;
+    if (remoteControlled()) {
+      return remote('playTracks', { tracks, index: start, shuffle: !!options?.shuffle, playlist_id: options?.playlistId ?? null });
+    }
     let items = tracks.map((track, order) => fromLibrary(track, order, options?.playlistId));
     let first = Math.max(0, Math.min(start, items.length - 1));
     const shuffle = options?.shuffle ?? false;
@@ -479,11 +593,15 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       },
       order: 0,
     };
+    // A preview always plays here, even while another device plays the queue (connect.ts mirrors it again after).
+    const remoteName = get().remote;
     set({ shuffle: false });
     load([item], 0);
+    set({ remote: remoteName });
   },
 
   playNext: (track) => {
+    if (remoteControlled()) return remote('playNext', { track });
     const { queue, index } = get();
     if (!queue.length) return get().playTracks([track]);
     const item = fromLibrary(track, queue.length);
@@ -492,6 +610,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   addToQueue: (track) => {
+    if (remoteControlled()) return remote('addToQueue', { track });
     const { queue } = get();
     if (!queue.length) return get().playTracks([track]);
     const item = fromLibrary(track, queue.length);
@@ -502,11 +621,17 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   removeAt: (i) => {
     const { queue, index } = get();
     if (i === index || i < 0 || i >= queue.length) return;
+    if (remoteControlled()) {
+      // Shown at once; the other device confirms with its next state.
+      set({ queue: queue.filter((_, j) => j !== i), index: i < index ? index - 1 : index });
+      return remote('removeAt', { index: i });
+    }
     getPlaylist().remove(i);
     set({ queue: queue.filter((_, j) => j !== i), index: i < index ? index - 1 : index });
   },
 
   skipTo: (i) => {
+    if (remoteControlled()) return remote('skipTo', { index: i });
     crossfade.dispose();
     const pl = getPlaylist();
     pl.skipTo(i);
@@ -514,8 +639,18 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   toggle: () => {
+    if (remoteControlled()) {
+      set({ playing: !get().playing });
+      return remote('toggle');
+    }
     const pl = getPlaylist();
-    if (!get().queue.length) return;
+    const { queue, index, position } = get();
+    if (!queue.length) return;
+    if (!nativeLoaded) {
+      // The shown queue came from another device that has left: play it here from the same spot.
+      load(queue, index, position);
+      return;
+    }
     if (pl.playing) {
       crossfade.dispose();
       pl.pause();
@@ -538,6 +673,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   next: () => {
+    if (remoteControlled()) return remote('next');
     // During a fade the queue already moved on: just finish the fade.
     if (crossfade.fading) return crossfade.dispose();
     crossfade.dispose();
@@ -545,6 +681,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   previous: () => {
+    if (remoteControlled()) return remote('previous');
     crossfade.dispose();
     const pl = getPlaylist();
     if (pl.currentTime > 3 || pl.currentIndex === 0) pl.seekTo(0);
@@ -552,6 +689,10 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   seek: (seconds) => {
+    if (remoteControlled()) {
+      set({ position: seconds });
+      return remote('seek', { position: seconds });
+    }
     // Not loaded yet (restored, never played): remember the new spot for the first play.
     if (pendingSeek !== null) {
       pendingSeek = seconds;
@@ -564,30 +705,35 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   cycleRepeat: () => {
-    const order: RepeatMode[] = ['none', 'all', 'single'];
-    const repeat = order[(order.indexOf(get().repeat) + 1) % order.length];
+    const repeat = REPEAT_ORDER[(REPEAT_ORDER.indexOf(get().repeat) + 1) % REPEAT_ORDER.length];
+    get().setRepeat(repeat);
+  },
+
+  setRepeat: (repeat) => {
+    if (remoteControlled()) {
+      set({ repeat });
+      return remote('repeat', { mode: repeat });
+    }
     getPlaylist().loop = repeat;
     set({ repeat });
   },
 
-  toggleShuffle: () => {
+  toggleShuffle: () => get().setShuffle(!get().shuffle),
+
+  setShuffle: (on) => {
+    if (remoteControlled()) {
+      set({ shuffle: on });
+      return remote('shuffle', { on });
+    }
     const { queue, index, shuffle } = get();
+    if (on === shuffle) return;
     const upcoming = queue.slice(index + 1);
     if (upcoming.length) replaceUpcoming(shuffle ? [...upcoming].sort((a, b) => a.order - b.order) : shuffled(upcoming));
-    set({ shuffle: !shuffle });
+    set({ shuffle: on });
   },
 
   stop: () => {
-    crossfade.dispose();
-    tracker.flush();
-    if (playlist) {
-      playlist.pause();
-      playlist.clear();
-      playlist.clearLockScreenControls();
-      lockScreenActive = false;
-    }
-    pendingSeek = null;
-    restoredIdle = false;
+    unloadNative();
     set({ queue: [], index: 0, playing: false, position: 0, duration: 0 });
   },
 
@@ -603,28 +749,67 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (!saved) return;
     let order = 0;
     const items = saved.tracks.map((track, i) => fromLibrary(track, order++, saved.playlists?.[i]));
-    const index = Math.min(saved.index, items.length - 1);
-    const pl = getPlaylist();
-    for (const item of items) pl.add(sourceFor(item));
-    pl.skipTo(index);
-    pl.loop = saved.repeat;
-    pendingSeek = saved.position > 0 ? saved.position : null;
-    restoredIdle = true;
+    loadPaused(items, Math.min(saved.index, items.length - 1), saved.position, saved.repeat, saved.shuffle);
+  },
+
+  mirror: (snapshot, deviceName) => {
+    // Another device plays: no audio here, the controls steer that device.
+    if (nativeLoaded) unloadNative();
+    const { queue } = get();
+    const items = sameQueue(queue, snapshot.tracks)
+      ? queue.map((item, i) => ({ ...item, playlistId: snapshot.tracks[i].playlist_id ?? null }))
+      : snapshotItems(snapshot);
+    const index = Math.max(0, Math.min(snapshot.index, items.length - 1));
     set({
       queue: items,
       index,
-      position: saved.position,
+      position: snapshot.position,
       duration: items[index]?.duration ?? 0,
-      repeat: saved.repeat,
-      shuffle: saved.shuffle,
-      playing: false,
+      playing: snapshot.playing,
+      buffering: false,
+      repeat: snapshot.repeat,
+      shuffle: snapshot.shuffle,
+      remote: deviceName,
     });
+  },
+
+  adopt: (snapshot) => {
+    // Nobody plays: keep the last shared state here, paused, so play continues it on this device.
+    set({ remote: null });
+    const { queue, index } = get();
+    if (nativeLoaded && sameQueue(queue, snapshot.tracks) && index === snapshot.index) {
+      if (pendingSeek !== null || !get().playing) {
+        pendingSeek = snapshot.position > 0 ? snapshot.position : null;
+        set({ position: snapshot.position });
+      }
+      return;
+    }
+    loadPaused(snapshotItems(snapshot), Math.max(0, Math.min(snapshot.index, snapshot.tracks.length - 1)), snapshot.position, snapshot.repeat, snapshot.shuffle);
+  },
+
+  takeOver: (snapshot) => {
+    // "Play on this iPhone": the audio moves here and continues where the other device was.
+    const items = snapshotItems(snapshot);
+    if (!items.length) {
+      set({ remote: null });
+      return;
+    }
+    const index = Math.max(0, Math.min(snapshot.index, items.length - 1));
+    getPlaylist().loop = snapshot.repeat;
+    set({ repeat: snapshot.repeat, shuffle: snapshot.shuffle });
+    load(items, index, snapshot.position);
+  },
+
+  release: (deviceName) => {
+    // Another device took the audio: stop here and mirror it.
+    unloadNative();
+    set({ remote: deviceName, playing: false, buffering: false });
   },
 }));
 
 // A song that finishes downloading while it waits in the queue switches to the local file, so it never streams.
 useOffline.subscribe((state, prev) => {
-  if (!playlist || state.tracks === prev.tracks) return;
+  if (!playlist || !nativeLoaded || state.tracks === prev.tracks) return;
   const { queue, index } = usePlayer.getState();
   for (let i = index + 1; i < queue.length; i++) {
     const item = queue[i];

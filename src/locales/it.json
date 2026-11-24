@@ -208,5 +208,10 @@
     "offlineTitle": "Modalità offline",
     "offlineBody": "Il server Music Seerr non è raggiungibile. I brani scaricati sono nella tab Scaricati.",
     "openDownloads": "Apri i download"
+  },
+  "connect": {
+    "playingOn": "In riproduzione su {{name}}",
+    "playingElsewhere": "In riproduzione su un altro dispositivo",
+    "playHere": "Riproduci su questo iPhone"
   }
 }

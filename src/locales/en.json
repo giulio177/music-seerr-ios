@@ -208,5 +208,10 @@
     "offlineTitle": "Offline mode",
     "offlineBody": "The Music Seerr server is unreachable. Your downloaded songs are in the Downloads tab.",
     "openDownloads": "Open downloads"
+  },
+  "connect": {
+    "playingOn": "Playing on {{name}}",
+    "playingElsewhere": "Playing on another device",
+    "playHere": "Play on this iPhone"
   }
 }

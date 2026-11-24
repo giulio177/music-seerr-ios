@@ -21,6 +21,7 @@ export function MiniPlayer() {
   const playing = usePlayer((s) => s.playing);
   const buffering = usePlayer((s) => s.buffering);
   const progress = usePlayer((s) => (s.duration > 0 ? Math.min(1, s.position / s.duration) : 0));
+  const remote = usePlayer((s) => s.remote);
   const { accent } = useAccent();
   const [x] = useState(() => new Animated.Value(0));
 
@@ -53,8 +54,9 @@ export function MiniPlayer() {
               {item?.title ?? t('player.nothing')}
             </Text>
             {item && !inline ? (
-              <Text numberOfLines={1} style={styles.artist}>
-                {item.artist}
+              // Playing on another device: say where, like Spotify's green line.
+              <Text numberOfLines={1} style={[styles.artist, remote !== null && { color: accent }]}>
+                {remote !== null ? (remote ? t('connect.playingOn', { name: remote }) : t('connect.playingElsewhere')) : item.artist}
               </Text>
             ) : null}
           </View>

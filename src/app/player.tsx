@@ -23,6 +23,7 @@ import { Backdrop } from '@/components/ui';
 import { formatTime } from '@/lib/format';
 import { parseLrc, useLyrics, type LyricLine } from '@/lib/lyrics';
 import { useOffline } from '@/lib/offline';
+import { playHere, useConnect } from '@/lib/connect';
 import { usePlayer, useCurrentItem, type QueueItem } from '@/lib/player';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
 import { RoutePickerView, ScrubberView, SystemVolumeView } from '../../modules/system-audio';
@@ -60,7 +61,7 @@ export default function Player() {
         )}
         <Scrubber />
         <Controls />
-        <VolumeRow />
+        <OutputRow />
         <BottomBar panel={panel} onChange={setPanel} />
       </SafeAreaView>
     </View>
@@ -489,6 +490,41 @@ function Controls() {
 
 const pressedStyle = ({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1 });
 
+/** The volume when the audio plays here; the playing device and "Play on this iPhone" when it plays elsewhere. */
+function OutputRow() {
+  const remote = usePlayer((s) => s.remote);
+  return remote === null ? <VolumeRow /> : <DeviceBanner name={remote} />;
+}
+
+function DeviceBanner({ name }: { name: string }) {
+  const { t } = useTranslation();
+  const { accent } = useAccent();
+  const kind = useConnect((s) => s.devices.find((d) => d.id === s.active)?.kind);
+  return (
+    <View style={styles.device}>
+      <View style={styles.deviceInfo}>
+        <Symbol
+          name={kind === 'ios' ? 'iphone' : 'desktopcomputer'}
+          fallback={kind === 'ios' ? 'phone-portrait-outline' : 'desktop-outline'}
+          size={18}
+          color={accent}
+        />
+        <Text numberOfLines={1} style={[styles.deviceName, { color: accent }]}>
+          {name ? t('connect.playingOn', { name }) : t('connect.playingElsewhere')}
+        </Text>
+      </View>
+      <Pressable
+        onPress={playHere}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.playHere, { backgroundColor: withAlpha(accent, 0.22), borderColor: withAlpha(accent, 0.5) }, pressed && { opacity: 0.6 }]}
+      >
+        <Symbol name="iphone.radiowaves.left.and.right" fallback="phone-portrait" size={16} color={colors.text} />
+        <Text style={styles.playHereText}>{t('connect.playHere')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 /** System volume (moves with the hardware buttons); hidden in builds without the native module. */
 function VolumeRow() {
   if (!SystemVolumeView) return <View style={{ height: 12 }} />;
@@ -559,6 +595,11 @@ const styles = StyleSheet.create({
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', marginTop: 18, marginBottom: 14 },
   playButton: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
   volume: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  device: { alignItems: 'center', gap: 10, marginBottom: 12 },
+  deviceInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '100%' },
+  deviceName: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  playHere: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, height: 38, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth },
+  playHereText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginBottom: 4 },
   barButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   barButtonActive: { backgroundColor: 'rgba(255,255,255,0.75)' },
