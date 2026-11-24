@@ -139,22 +139,35 @@ function getPlaylist() {
 
 // --- Crossfade -------------------------------------------------------------
 
-/** Starts the outgoing tail this many seconds before the fade, so the second player has loaded. */
-const PRELOAD_SECONDS = 10;
-const FADE_STEP_MS = 50;
+/** The outgoing tail loads this many seconds before the fade, so it is buffered at the fade start. */
+const PRELOAD_SECONDS = 12;
+const STEP_MS = 40;
+/** Both players play the same audio for this long while the tail takes over (hides any small offset). */
+const HANDOFF_MS = 400;
+/** Larger gaps between the two players than this would be heard: the song then ends normally. */
+const MAX_OFFSET = 0.12;
+
+type FadePhase = 'idle' | 'priming' | 'armed' | 'handoff' | 'fading' | 'skipped';
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Crossfade with the single-queue native player: near the end of a song a second player loads the same
- * source, takes over its last seconds and fades out while the queue moves to the next song and fades in.
+ * Crossfade with the single-queue native player. Near the end of a song a second player loads the same
+ * source and waits, paused and buffered, exactly at the fade start (seek without tolerance). At that moment
+ * it starts silently, takes over the song in a short overlap of the same audio, then the queue moves to the
+ * next song and the two fade across with equal-power curves.
  */
 const crossfade = {
   tail: null as AudioPlayer | null,
   tailKey: null as string | null,
-  timer: null as ReturnType<typeof setInterval> | null,
-  starting: false,
+  fadeStart: 0,
+  phase: 'idle' as FadePhase,
+  /** Bumped by `dispose`, so a running step sees it was cancelled. */
+  run: 0,
+  scheduled: null as ReturnType<typeof setTimeout> | null,
 
-  get active() {
-    return this.starting || this.timer !== null;
+  get fading() {
+    return this.phase === 'handoff' || this.phase === 'fading';
   },
 
   seconds() {
@@ -164,71 +177,114 @@ const crossfade = {
   /** Called on every status update of the queue player. */
   check(time: number, duration: number, playing: boolean, buffering: boolean, index: number) {
     // Paused during a fade (lock screen, headphones): stop the tail with it.
-    if (this.timer !== null && !playing && !buffering) return this.dispose();
-    if (this.active || !playlist) return;
+    if (this.fading && !playing && !buffering) return this.dispose();
+    if (this.fading || !playlist) return;
     const seconds = this.seconds();
     const { queue, repeat } = usePlayer.getState();
     const item = queue[index];
     const hasNext = index < queue.length - 1 || (repeat === 'all' && queue.length > 1);
-    if (!seconds || !playing || !item || item.kind !== 'library' || repeat === 'single' || !hasNext || duration < seconds * 3) {
-      if (this.tail && this.tailKey !== item?.key) this.dispose();
-      return;
-    }
-    const remaining = duration - time;
-    if (remaining > seconds + PRELOAD_SECONDS) {
+    const eligible = !!seconds && !!item && item.kind === 'library' && repeat !== 'single' && hasNext && duration >= seconds * 3;
+    if (!eligible || duration - time > seconds + PRELOAD_SECONDS) {
       if (this.tail) this.dispose();
       return;
     }
     if (this.tailKey !== item.key) {
       this.dispose();
-      this.tail = createAudioPlayer(sourceFor(item), { updateInterval: 1000, keepAudioSessionActive: true });
-      this.tailKey = item.key;
-    }
-    if (remaining <= seconds && remaining > 0.5) this.start(item.key, remaining);
-  },
-
-  async start(key: string, remaining: number) {
-    const tail = this.tail;
-    const pl = playlist;
-    if (!tail || !pl || !tail.isLoaded) return;
-    this.starting = true;
-    try {
-      // Seek a little ahead, then start the tail when the queue player reaches that spot.
-      const target = pl.currentTime + 0.3;
-      tail.volume = 1;
-      await tail.seekTo(target);
-      if (!this.starting || this.tail !== tail || usePlayer.getState().queue[pl.currentIndex]?.key !== key || !pl.playing) {
-        this.starting = false;
+      this.fadeStart = duration - seconds;
+      if (time > this.fadeStart - 1) {
+        // Started (or seeked) too close to the end to prepare the tail.
+        this.tailKey = item.key;
+        this.phase = 'skipped';
         return;
       }
-      const wait = (target - pl.currentTime) * 1000;
-      if (wait > 0 && wait < 1000) await new Promise((resolve) => setTimeout(resolve, wait));
-      if (!this.starting || this.tail !== tail) return;
-      tail.play();
-      pl.volume = 0;
-      pl.next();
-    } catch {
-      this.starting = false;
-      this.dispose();
+      this.tail = createAudioPlayer(sourceFor(item), { updateInterval: 1000, keepAudioSessionActive: true });
+      this.tailKey = item.key;
+      this.phase = 'priming';
+      this.prime(this.run);
       return;
     }
-    this.starting = false;
-    const fade = Math.max(1, remaining - 0.3) * 1000;
+    if (this.phase === 'armed' && playing && !this.scheduled) {
+      // The status time can be up to one update old; read the live position for the timer.
+      const delta = this.fadeStart - playlist.currentTime;
+      if (delta < -0.5) this.phase = 'skipped';
+      else if (delta <= 1.5) this.scheduled = setTimeout(() => this.handoff(this.run, item.key), Math.max(0, delta * 1000));
+    }
+  },
+
+  /** Waits for the tail to load, then parks it exactly at the fade start. */
+  async prime(run: number) {
+    const tail = this.tail;
+    if (!tail) return;
+    for (let i = 0; i < 150 && !tail.isLoaded; i++) {
+      await wait(100);
+      if (run !== this.run) return;
+    }
+    if (!tail.isLoaded) {
+      this.phase = 'skipped';
+      return;
+    }
+    tail.volume = 0;
+    await tail.seekTo(this.fadeStart, 0, 0);
+    if (run === this.run) this.phase = 'armed';
+  },
+
+  async handoff(run: number, key: string) {
+    this.scheduled = null;
+    const tail = this.tail;
+    const pl = playlist;
+    if (run !== this.run || !tail || !pl || !pl.playing || usePlayer.getState().queue[pl.currentIndex]?.key !== key) return;
+    this.phase = 'handoff';
+    // Align the parked tail with where the queue player really is (timers drift by a few tens of ms).
+    const lead = pl.currentTime - this.fadeStart;
+    if (Math.abs(lead) > 0.05) await tail.seekTo(pl.currentTime + 0.05, 0, 0);
+    if (run !== this.run) return;
+    tail.volume = 0;
+    tail.play();
+    for (let i = 0; i < 50 && !tail.playing; i++) {
+      await wait(20);
+      if (run !== this.run) return;
+    }
+    if (!tail.playing || Math.abs(tail.currentTime - pl.currentTime) > MAX_OFFSET) {
+      // Could not line up: no crossfade for this song rather than an audible jump.
+      this.dispose();
+      this.phase = 'skipped';
+      this.tailKey = key;
+      return;
+    }
+    // Same audio on both players: a short linear swap.
+    if (!(await this.ramp(run, HANDOFF_MS, (p) => {
+      tail.volume = p;
+      pl.volume = 1 - p;
+    })))
+      return;
+    const remaining = Math.max(1, (tail.duration || this.fadeStart + this.seconds()) - tail.currentTime);
+    this.phase = 'fading';
+    pl.next();
+    // Different songs: equal power keeps the loudness steady.
+    if (await this.ramp(run, remaining * 1000, (p) => {
+      tail.volume = Math.cos((p * Math.PI) / 2);
+      pl.volume = Math.sin((p * Math.PI) / 2);
+    }))
+      this.dispose();
+  },
+
+  /** Calls `apply` with progress 0..1 over `ms`; false when cancelled. */
+  async ramp(run: number, ms: number, apply: (progress: number) => void) {
     const began = Date.now();
-    this.timer = setInterval(() => {
-      const progress = Math.min(1, (Date.now() - began) / fade);
-      // Equal power: the overall loudness holds through the fade.
-      tail.volume = Math.cos((progress * Math.PI) / 2);
-      if (playlist) playlist.volume = Math.sin((progress * Math.PI) / 2);
-      if (progress >= 1) this.dispose();
-    }, FADE_STEP_MS);
+    for (;;) {
+      if (run !== this.run) return false;
+      const progress = Math.min(1, (Date.now() - began) / ms);
+      apply(progress);
+      if (progress >= 1) return true;
+      await wait(STEP_MS);
+    }
   },
 
   /** Ends any fade at once: the queue player back at full volume, the tail stopped and released. */
   dispose() {
-    this.starting = false;
-    if (this.timer !== null) clearInterval(this.timer);
-    this.timer = null;
+    this.run += 1;
+    if (this.scheduled) clearTimeout(this.scheduled);
+    this.scheduled = null;
     if (this.tail) {
       try {
         this.tail.pause();
@@ -239,6 +295,7 @@ const crossfade = {
     }
     this.tail = null;
     this.tailKey = null;
+    this.phase = 'idle';
     if (playlist) playlist.volume = 1;
   },
 };
@@ -491,7 +548,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   next: () => {
     // During a fade the queue already moved on: just finish the fade.
-    if (crossfade.active) return crossfade.dispose();
+    if (crossfade.phase === 'fading') return crossfade.dispose();
+    crossfade.dispose();
     getPlaylist().next();
   },
 
