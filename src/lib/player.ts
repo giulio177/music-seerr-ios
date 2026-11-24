@@ -139,152 +139,133 @@ function getPlaylist() {
 
 // --- Crossfade -------------------------------------------------------------
 
-/** The outgoing tail loads this many seconds before the fade, so it is buffered at the fade start. */
-const PRELOAD_SECONDS = 12;
-const STEP_MS = 40;
-/** Both players play the same audio for this long while the tail takes over (hides any small offset). */
-const HANDOFF_MS = 400;
-/** Larger gaps between the two players than this would be heard: the song then ends normally. */
-const MAX_OFFSET = 0.12;
-
-type FadePhase = 'idle' | 'priming' | 'armed' | 'handoff' | 'fading' | 'skipped';
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Seconds before the fade at which the tail starts syncing (it needs time to load and line up). */
+const CROSSFADE_LEAD = 8;
+const TICK_MS = 40;
+/** Offset under which the two players count as aligned: the swap is then inaudible. */
+const ALIGNED = 0.02;
 
 /**
- * Crossfade with the single-queue native player. Near the end of a song a second player loads the same
- * source and waits, paused and buffered, exactly at the fade start (seek without tolerance). At that moment
- * it starts silently, takes over the song in a short overlap of the same audio, then the queue moves to the
- * next song and the two fade across with equal-power curves.
+ * Crossfade, same logic as the web app: a few seconds before a queue song ends, a second player starts the
+ * same source muted and is aligned to the queue player with small playback rate nudges. Once aligned, the
+ * players swap at once (same audio, so it is not heard): the tail carries the song's last seconds and fades
+ * out while the queue moves to the next song and fades in. Lock screen, history, and lyrics follow the queue.
  */
 const crossfade = {
   tail: null as AudioPlayer | null,
-  tailKey: null as string | null,
-  fadeStart: 0,
-  phase: 'idle' as FadePhase,
-  /** Bumped by `dispose`, so a running step sees it was cancelled. */
-  run: 0,
-  scheduled: null as ReturnType<typeof setTimeout> | null,
+  state: 'idle' as 'idle' | 'syncing' | 'fading',
+  key: null as string | null,
+  rate: 1,
+  timer: null as ReturnType<typeof setInterval> | null,
+  endTimer: null as ReturnType<typeof setTimeout> | null,
 
   get fading() {
-    return this.phase === 'handoff' || this.phase === 'fading';
+    return this.state === 'fading';
   },
 
   seconds() {
     return usePreferences.getState().prefs?.crossfade_seconds ?? 0;
   },
 
-  /** Called on every status update of the queue player. */
+  nextIndex() {
+    const { queue, index, repeat } = usePlayer.getState();
+    if (repeat === 'single' || !queue.length) return -1;
+    if (index + 1 < queue.length) return index + 1;
+    return repeat === 'all' && queue.length > 1 ? 0 : -1;
+  },
+
+  /** Called on every status update of the queue player (like the web app's `timeupdate`). */
   check(time: number, duration: number, playing: boolean, buffering: boolean, index: number) {
     // Paused during a fade (lock screen, headphones): stop the tail with it.
-    if (this.fading && !playing && !buffering) return this.dispose();
-    if (this.fading || !playlist) return;
+    if (this.state === 'fading' && !playing && !buffering) return this.abort();
+    if (this.state !== 'idle' || !playlist || !playing) return;
     const seconds = this.seconds();
-    const { queue, repeat } = usePlayer.getState();
-    const item = queue[index];
-    const hasNext = index < queue.length - 1 || (repeat === 'all' && queue.length > 1);
-    const eligible = !!seconds && !!item && item.kind === 'library' && repeat !== 'single' && hasNext && duration >= seconds * 3;
-    if (!eligible || duration - time > seconds + PRELOAD_SECONDS) {
-      if (this.tail) this.dispose();
-      return;
-    }
-    if (this.tailKey !== item.key) {
-      this.dispose();
-      this.fadeStart = duration - seconds;
-      if (time > this.fadeStart - 1) {
-        // Started (or seeked) too close to the end to prepare the tail.
-        this.tailKey = item.key;
-        this.phase = 'skipped';
+    const item = usePlayer.getState().queue[index];
+    if (!seconds || !item || item.kind !== 'library' || !duration || duration < seconds * 2 + 10) return;
+    const remaining = duration - time;
+    if (remaining > seconds + CROSSFADE_LEAD || remaining < seconds + 1) return;
+    if (this.nextIndex() < 0) return;
+    this.startSync(item);
+  },
+
+  startSync(item: QueueItem) {
+    const pl = playlist!;
+    this.state = 'syncing';
+    this.key = item.key;
+    this.rate = 1;
+    const tail = createAudioPlayer(sourceFor(item), { updateInterval: 1000, keepAudioSessionActive: true });
+    this.tail = tail;
+    tail.volume = 0;
+    tail.seekTo(pl.currentTime + 0.3, 0, 0).catch(() => undefined);
+    tail.play();
+    this.timer = setInterval(() => this.tick(), TICK_MS);
+  },
+
+  tick() {
+    const pl = playlist;
+    const tail = this.tail;
+    if (this.state !== 'syncing' || !pl || !tail) return;
+    const duration = pl.duration;
+    if ((!pl.playing && !pl.isBuffering) || !duration || usePlayer.getState().queue[pl.currentIndex]?.key !== this.key) return this.abort();
+    const remaining = duration - pl.currentTime;
+    let aligned = false;
+    if (tail.isLoaded && tail.playing) {
+      const offset = tail.currentTime - pl.currentTime;
+      if (Math.abs(offset) > 2) {
+        tail.seekTo(pl.currentTime + 0.3, 0, 0).catch(() => undefined);
         return;
       }
-      this.tail = createAudioPlayer(sourceFor(item), { updateInterval: 1000, keepAudioSessionActive: true });
-      this.tailKey = item.key;
-      this.phase = 'priming';
-      this.prime(this.run);
-      return;
+      aligned = Math.abs(offset) < ALIGNED;
+      this.setRate(aligned ? 1 : offset > 0 ? 0.9 : 1.1);
     }
-    if (this.phase === 'armed' && playing && !this.scheduled) {
-      // The status time can be up to one update old; read the live position for the timer.
-      const delta = this.fadeStart - playlist.currentTime;
-      if (delta < -0.5) this.phase = 'skipped';
-      else if (delta <= 1.5) this.scheduled = setTimeout(() => this.handoff(this.run, item.key), Math.max(0, delta * 1000));
-    }
+    const seconds = this.seconds();
+    // Swap on time when aligned; otherwise a little late rather than not at all.
+    if ((remaining <= seconds && aligned) || (remaining <= seconds - 1.5 && tail.playing)) this.swap();
+    else if (remaining <= 1) this.abort();
   },
 
-  /** Waits for the tail to load, then parks it exactly at the fade start. */
-  async prime(run: number) {
-    const tail = this.tail;
-    if (!tail) return;
-    for (let i = 0; i < 150 && !tail.isLoaded; i++) {
-      await wait(100);
-      if (run !== this.run) return;
-    }
-    if (!tail.isLoaded) {
-      this.phase = 'skipped';
-      return;
-    }
-    tail.volume = 0;
-    await tail.seekTo(this.fadeStart, 0, 0);
-    if (run === this.run) this.phase = 'armed';
+  setRate(rate: number) {
+    if (!this.tail || rate === this.rate) return;
+    this.rate = rate;
+    this.tail.setPlaybackRate(rate);
   },
 
-  async handoff(run: number, key: string) {
-    this.scheduled = null;
-    const tail = this.tail;
+  swap() {
     const pl = playlist;
-    if (run !== this.run || !tail || !pl || !pl.playing || usePlayer.getState().queue[pl.currentIndex]?.key !== key) return;
-    this.phase = 'handoff';
-    // Align the parked tail with where the queue player really is (timers drift by a few tens of ms).
-    const lead = pl.currentTime - this.fadeStart;
-    if (Math.abs(lead) > 0.05) await tail.seekTo(pl.currentTime + 0.05, 0, 0);
-    if (run !== this.run) return;
-    tail.volume = 0;
-    tail.play();
-    for (let i = 0; i < 50 && !tail.playing; i++) {
-      await wait(20);
-      if (run !== this.run) return;
-    }
-    if (!tail.playing || Math.abs(tail.currentTime - pl.currentTime) > MAX_OFFSET) {
-      // Could not line up: no crossfade for this song rather than an audible jump.
-      this.dispose();
-      this.phase = 'skipped';
-      this.tailKey = key;
-      return;
-    }
-    // Same audio on both players: a short linear swap.
-    if (!(await this.ramp(run, HANDOFF_MS, (p) => {
-      tail.volume = p;
-      pl.volume = 1 - p;
-    })))
-      return;
-    const remaining = Math.max(1, (tail.duration || this.fadeStart + this.seconds()) - tail.currentTime);
-    this.phase = 'fading';
+    const tail = this.tail;
+    if (!pl || !tail || this.nextIndex() < 0) return this.abort();
+    const fade = Math.max(1, Math.min(this.seconds(), pl.duration - pl.currentTime));
+    if (this.timer !== null) clearInterval(this.timer);
+    this.state = 'fading';
+    this.setRate(1);
+    tail.volume = 1;
+    pl.volume = 0;
     pl.next();
-    // Different songs: equal power keeps the loudness steady.
-    if (await this.ramp(run, remaining * 1000, (p) => {
-      tail.volume = Math.cos((p * Math.PI) / 2);
-      pl.volume = Math.sin((p * Math.PI) / 2);
-    }))
-      this.dispose();
-  },
-
-  /** Calls `apply` with progress 0..1 over `ms`; false when cancelled. */
-  async ramp(run: number, ms: number, apply: (progress: number) => void) {
     const began = Date.now();
-    for (;;) {
-      if (run !== this.run) return false;
-      const progress = Math.min(1, (Date.now() - began) / ms);
-      apply(progress);
-      if (progress >= 1) return true;
-      await wait(STEP_MS);
-    }
+    this.timer = setInterval(() => {
+      const progress = Math.min(1, (Date.now() - began) / (fade * 1000));
+      tail.volume = 1 - progress;
+      if (playlist) playlist.volume = progress;
+      if (progress >= 1 && this.timer !== null) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+    }, TICK_MS);
+    this.endTimer = setTimeout(() => this.finish(), fade * 1000 + 300);
   },
 
-  /** Ends any fade at once: the queue player back at full volume, the tail stopped and released. */
-  dispose() {
-    this.run += 1;
-    if (this.scheduled) clearTimeout(this.scheduled);
-    this.scheduled = null;
+  /** The fade-out has finished: the tail is released; the new song is at full volume. */
+  finish() {
+    if (this.state !== 'fading') return;
+    this.release();
+    if (playlist) playlist.volume = 1;
+  },
+
+  release() {
+    if (this.timer !== null) clearInterval(this.timer);
+    if (this.endTimer !== null) clearTimeout(this.endTimer);
+    this.timer = null;
+    this.endTimer = null;
     if (this.tail) {
       try {
         this.tail.pause();
@@ -294,9 +275,19 @@ const crossfade = {
       }
     }
     this.tail = null;
-    this.tailKey = null;
-    this.phase = 'idle';
+    this.key = null;
+    this.state = 'idle';
+  },
+
+  /** Cancels a crossfade in progress (pause, seek, manual song change) and restores full volume. */
+  abort() {
+    if (this.state === 'idle') return;
+    this.release();
     if (playlist) playlist.volume = 1;
+  },
+
+  dispose() {
+    this.abort();
   },
 };
 
@@ -548,7 +539,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   next: () => {
     // During a fade the queue already moved on: just finish the fade.
-    if (crossfade.phase === 'fading') return crossfade.dispose();
+    if (crossfade.fading) return crossfade.dispose();
     crossfade.dispose();
     getPlaylist().next();
   },
