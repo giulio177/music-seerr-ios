@@ -203,7 +203,15 @@
       "invalid_aliases": "Check the names (up to 200 characters).",
       "invalid_accent": "This color is not valid.",
       "invalid_crossfade": "Choose 0 to 12 seconds."
-    }
+    },
+    "signing": "Signature",
+    "signingExpires": "Expires",
+    "signingDate": "Expiry date",
+    "signingDays_one": "In {{count}} day",
+    "signingDays_other": "In {{count}} days",
+    "signingToday": "Today",
+    "signingExpired": "Expired",
+    "signingFooter": "Apps signed with a free Apple ID stop opening after 7 days. Install the app again with Impactor or refresh it in SideStore before then: login and downloads are kept."
   },
   "errors": {
     "offlineTitle": "Offline mode",

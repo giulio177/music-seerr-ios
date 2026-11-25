@@ -16,6 +16,7 @@ import { savedLanguage, setLanguage, type LanguageChoice } from '@/lib/language'
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { usePreferences, type PreferenceChange } from '@/lib/preferences';
+import { daysLeft, signatureExpiry } from '@/lib/signing';
 import { ACCENT_PRESETS, colors, resolveAccent, useAccent } from '@/lib/theme';
 import { useApi } from '@/lib/useApi';
 
@@ -63,6 +64,7 @@ export default function Settings() {
           <PreferencesSection />
           {user?.is_admin && !unreachable ? <AdminSections /> : null}
           <DownloadsSection />
+          <SigningSection />
 
           <AccentButton
             label={t('settings.signOut')}
@@ -503,6 +505,22 @@ function AliasSection() {
 }
 
 /* ---------- Downloads (this iPhone) ---------- */
+
+/** Days until the sideloading signature (free Apple ID, 7 days) expires; hidden in unsigned builds. */
+function SigningSection() {
+  const { t, i18n } = useTranslation();
+  const [expiry] = useState(signatureExpiry);
+  if (!expiry) return null;
+  const days = daysLeft(expiry);
+  const date = expiry.toLocaleString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const value = days < 0 ? t('settings.signingExpired') : days === 0 ? t('settings.signingToday') : t('settings.signingDays', { count: days });
+  return (
+    <Section title={t('settings.signing')} footer={t('settings.signingFooter')}>
+      <Row label={t('settings.signingExpires')} value={value} danger={days < 2} />
+      <Row label={t('settings.signingDate')} value={date} last />
+    </Section>
+  );
+}
 
 function DownloadsSection() {
   const { t } = useTranslation();
