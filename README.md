@@ -11,6 +11,10 @@ iPhone client for [Music Seerr](https://github.com/giulio177/music-seerr), the s
 
 [Features](#features) · [Requirements](#requirements) · [Install](#install) · [Network](#network) · [Free Apple ID limits](#free-apple-id-limits) · [Siri and Shortcuts](#siri-and-shortcuts) · [Development](#development)
 
+| Home | Player and lyrics | Search and request | Offline downloads |
+| --- | --- | --- | --- |
+| ![Home screen](docs/screenshots/home.png) | ![Player with synced lyrics](docs/screenshots/player.png) | ![Search and request](docs/screenshots/search.png) | ![Offline downloads](docs/screenshots/downloads.png) |
+
 ## Features
 
 ### Browse and request
