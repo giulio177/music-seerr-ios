@@ -1,7 +1,7 @@
 import AppIntents
 import Foundation
 #if canImport(SystemAudio)
-import SystemAudio
+internal import SystemAudio
 import UIKit
 #endif
 
