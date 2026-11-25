@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { startConnect } from '@/lib/connect';
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { startShortcuts } from '@/lib/shortcuts';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -28,6 +29,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     applySavedLanguage().catch(() => undefined);
+    // Siri, Shortcuts, Control Center, and Spotlight: requests wait for the session (the app may have started for one).
+    try {
+      startShortcuts();
+    } catch (error) {
+      console.error('[startup] shortcuts', error);
+    }
     try {
       useOffline.getState().refresh();
     } catch (error) {

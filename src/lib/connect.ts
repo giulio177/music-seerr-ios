@@ -45,6 +45,12 @@ let deviceId: string | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;
 let retryDelay = 1000;
 let wanted = false;
+/** A Siri or Shortcuts action keeps the socket open until then, even in the background (`connectBriefly`). */
+let holdUntil = 0;
+/** Waiting for the next state from the server (`connectBriefly`). */
+let stateWaiters: (() => void)[] = [];
+/** A state arrived since the socket opened. */
+let stateReceived = false;
 
 /** Last state from the server and when it arrived (the position moves on from there while it plays). */
 let serverState: ServerState = null;
@@ -257,6 +263,8 @@ function onMessage(raw: string) {
       if (serverState) useConnect.setState({ active: serverState.active ?? null });
       applyServerState();
       updateTicker();
+      stateReceived = true;
+      stateWaiters.splice(0).forEach((resolve) => resolve());
       break;
     case 'command':
       // Only the playing device runs commands; a late one after a hand-over is dropped.
@@ -316,6 +324,7 @@ async function open() {
   socket = ws;
   ws.onopen = () => {
     retryDelay = 1000;
+    stateReceived = false;
     useConnect.setState({ connected: true });
     const s = usePlayer.getState();
     send({ type: 'hello', device_id: id, name: 'iPhone', kind: 'ios', playing: s.remote === null && (s.playing || s.buffering) });
@@ -327,6 +336,8 @@ async function open() {
   ws.onclose = () => {
     if (socket !== ws) return;
     socket = null;
+    // Unreachable: actions waiting for the state go on with what this iPhone knows.
+    stateWaiters.splice(0).forEach((resolve) => resolve());
     useConnect.setState({ connected: false, devices: [], active: null });
     updateTicker();
     // Without the server, controls act on this iPhone again.
@@ -350,7 +361,7 @@ function close() {
 function shouldConnect() {
   const { status, user, token } = useAuth.getState();
   if (status !== 'signedIn' || !token || !user || user.is_guest) return false;
-  if (AppState.currentState === 'active') return true;
+  if (AppState.currentState === 'active' || Date.now() < holdUntil) return true;
   // In the background only while this iPhone plays.
   const s = usePlayer.getState();
   return s.remote === null && (s.playing || s.buffering);
@@ -378,6 +389,35 @@ function sync() {
   }
   wanted = false;
   close();
+}
+
+/**
+ * Opens the socket for a moment (a Siri or Shortcuts action, maybe in the background) and waits for the shared
+ * state, so the action knows which device plays and steers it. Resolves at once when already connected.
+ */
+export function connectBriefly(timeoutMs = 4000): Promise<void> {
+  const { status, user, token } = useAuth.getState();
+  if (status !== 'signedIn' || !token || !user || user.is_guest) return Promise.resolve();
+  holdUntil = Date.now() + 20000;
+  setTimeout(sync, 20500);
+  if (socket?.readyState === WebSocket.OPEN && stateReceived) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      stateWaiters = stateWaiters.filter((waiter) => waiter !== done);
+      resolve();
+    };
+    const timer = setTimeout(done, timeoutMs);
+    stateWaiters.push(done);
+    sync();
+  });
+}
+
+/** The device that plays the audio: this iPhone, another device (name and kind), or none. */
+export function activeDevice(): { here: boolean; device: Device | null } {
+  const { active, devices, connected } = useConnect.getState();
+  if (!connected || !active) return { here: false, device: null };
+  return { here: active === deviceId, device: devices.find((d) => d.id === active) ?? null };
 }
 
 /** Asks for the audio here ("Play on this iPhone"). */

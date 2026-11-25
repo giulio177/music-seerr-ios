@@ -1,0 +1,21 @@
+/* Siri phrases of MusicSeerrShortcuts; every phrase must keep ${applicationName}. */
+
+"Play ${playlist} in ${applicationName}" = "Play ${playlist} in ${applicationName}";
+"Play the playlist ${playlist} in ${applicationName}" = "Play the playlist ${playlist} in ${applicationName}";
+"Play a playlist in ${applicationName}" = "Play a playlist in ${applicationName}";
+"Play the album ${album} in ${applicationName}" = "Play the album ${album} in ${applicationName}";
+"Play an album in ${applicationName}" = "Play an album in ${applicationName}";
+"Play my downloads in ${applicationName}" = "Play my downloads in ${applicationName}";
+"Shuffle my downloads in ${applicationName}" = "Shuffle my downloads in ${applicationName}";
+"Play a song in ${applicationName}" = "Play a song in ${applicationName}";
+"Shuffle my library in ${applicationName}" = "Shuffle my library in ${applicationName}";
+"Shuffle ${applicationName}" = "Shuffle ${applicationName}";
+"Play recently added in ${applicationName}" = "Play recently added in ${applicationName}";
+"Resume ${applicationName}" = "Resume ${applicationName}";
+"Continue listening in ${applicationName}" = "Continue listening in ${applicationName}";
+"What's playing in ${applicationName}" = "What's playing in ${applicationName}";
+"What's playing on ${applicationName}" = "What's playing on ${applicationName}";
+"Request a song in ${applicationName}" = "Request a song in ${applicationName}";
+"Request a song on ${applicationName}" = "Request a song on ${applicationName}";
+"What's downloading in ${applicationName}" = "What's downloading in ${applicationName}";
+"Check the downloads in ${applicationName}" = "Check the downloads in ${applicationName}";

@@ -40,3 +40,15 @@ export const ScrubberView = optionalView<ScrubberProps>('Scrubber');
 export const MenuButtonView = optionalView<MenuButtonProps>('MenuButton');
 export const ContextMenuView = optionalView<ContextMenuProps>('ContextMenu');
 export const SwipeLockView = optionalView<ViewProps>('SwipeLock');
+
+export type ShortcutRequest = { id: string; action: string; args: Record<string, unknown> };
+
+type ShortcutsNative = {
+  addListener: (event: 'onRequest', listener: (request: ShortcutRequest) => void) => { remove: () => void };
+  ready: () => void;
+  respond: (id: string, json: string | null, error: string | null) => void;
+  catalogChanged: () => void;
+};
+
+/** App Intents bridge (Siri, Shortcuts, Control Center, Spotlight); null in builds made before it existed. */
+export const ShortcutsNative = requireOptionalNativeModule<ShortcutsNative>('Shortcuts');

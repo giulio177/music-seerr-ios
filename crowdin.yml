@@ -9,3 +9,8 @@ preserve_hierarchy: true
 files:
   - source: /src/locales/en.json
     translation: /src/locales/%two_letters_code%.json
+  # Siri, Shortcuts, and Control Center (App Intents); keys are the English text of the Swift sources.
+  - source: /modules/system-audio/ios/Localization/en.lproj/*.strings
+    translation: /modules/system-audio/ios/Localization/%two_letters_code%.lproj/%original_file_name%
+  - source: /targets/widget/en.lproj/*.strings
+    translation: /targets/widget/%two_letters_code%.lproj/%original_file_name%

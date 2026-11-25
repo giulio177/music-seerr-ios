@@ -1,0 +1,14 @@
+/* Control Center controls (keys are the English text in the Swift sources). */
+
+"Music Seerr did not answer. Open the app and try again." = "Music Seerr non ha risposto. Apri l'app e riprova.";
+"Open Music Seerr and try again." = "Apri Music Seerr e riprova.";
+"Play or Pause" = "Riproduci o metti in pausa";
+"Next Song" = "Brano successivo";
+"Previous Song" = "Brano precedente";
+"Shuffle Downloads" = "Download in ordine casuale";
+"Shuffle Library" = "Libreria in ordine casuale";
+"Plays a random mix of songs from the whole library." = "Riproduce un mix casuale di brani da tutta la libreria.";
+"Plays or pauses Music Seerr, also when the web app is playing." = "Riproduce o mette in pausa Music Seerr, anche quando suona la web app.";
+"Skips to the next song." = "Passa al brano successivo.";
+"Goes back to the previous song." = "Torna al brano precedente.";
+"Plays the songs downloaded to this iPhone in random order." = "Riproduce in ordine casuale i brani scaricati su questo iPhone.";

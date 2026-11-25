@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name           = 'SystemAudio'
   s.version        = '1.0.0'
-  s.summary        = 'System volume slider and AirPlay route picker for Music Seerr'
+  s.summary        = 'Native views and the App Intents bridge for Music Seerr'
   s.description    = s.summary
   s.author         = 'Music Seerr'
   s.homepage       = 'https://github.com/giulio177/music-seerr-ios'
@@ -14,4 +14,6 @@ Pod::Spec.new do |s|
 
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.source_files = '**/*.swift'
+  # Copied into the app bundle: App Intents strings and Siri phrases (en, it).
+  s.resources = 'Localization/*.lproj'
 end

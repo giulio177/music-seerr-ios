@@ -13,6 +13,7 @@ iOS client for [Music Seerr](https://github.com/giulio177/music-seerr), the self
 - Background playback, lock screen and Control Center controls, queue, shuffle, and repeat.
 - Synced lyrics, also saved with downloads.
 - Native iOS tab bar with the mini player as its accessory (iOS 26 and later).
+- Siri and Shortcuts actions, Control Center buttons, and Spotlight results for playlists and albums (iOS 26 and later).
 - English and Italian interface.
 
 ## Requirements
@@ -50,6 +51,25 @@ With a free Apple ID, apps must be refreshed every 7 days. AltStore and SideStor
 |---|---|
 | Background audio, lock screen controls, AirPlay, Bluetooth | CarPlay (needs an Apple entitlement) |
 | Offline downloads | Push notifications |
+| Siri phrases that name the app ("Play my downloads in Music Seerr"), Shortcuts, Control Center | Siri requests without the app name ("Play Road Trip") |
+
+The Control Center buttons come from an app extension. On install it takes one more App ID of the free Apple ID's weekly limit.
+
+## Siri and Shortcuts
+
+| Action | What it does |
+|---|---|
+| Play Playlist, Play Album, Play Artist | Asks whether to play all songs or only the downloaded ones; optional shuffle |
+| Play Downloads, Play Recently Added, Shuffle Library, Play Song | Starts playback |
+| Resume Listening, Control Playback, Set Repeat, Set Shuffle | Steers the playing device, also the web app |
+| Play on This iPhone | Moves the playback from the web app here |
+| Add Song to Queue, Add Album to Queue, Add Current Song to Playlist | Edits the queue or a playlist |
+| Request Song, Server Downloads | Requests a song from the catalog; tells what the server downloads |
+| Download Current Song, Download Album, Download Playlist | Saves songs on the iPhone |
+| What's Playing | Returns the song, whether it plays, and on which device |
+
+- When the app is not running, an action opens it first.
+- Playlists and albums appear in Spotlight; a result opens the page and plays it.
 
 ## Development
 
@@ -81,6 +101,7 @@ Versions follow SemVer; the tag is the version source.
 ## Translations
 
 Interface strings live in `src/locales/` (`en.json` is the source) and sync with Crowdin through `crowdin.yml`.
+Siri and Shortcuts strings live in `modules/system-audio/ios/Localization/` and `targets/widget/` (`en.lproj` is the source).
 
 ## License
 

@@ -1,0 +1,21 @@
+/* Siri phrases of MusicSeerrShortcuts; every phrase must keep ${applicationName}. */
+
+"Play ${playlist} in ${applicationName}" = "Riproduci ${playlist} su ${applicationName}";
+"Play the playlist ${playlist} in ${applicationName}" = "Riproduci la playlist ${playlist} su ${applicationName}";
+"Play a playlist in ${applicationName}" = "Riproduci una playlist su ${applicationName}";
+"Play the album ${album} in ${applicationName}" = "Riproduci l'album ${album} su ${applicationName}";
+"Play an album in ${applicationName}" = "Riproduci un album su ${applicationName}";
+"Play my downloads in ${applicationName}" = "Riproduci i miei download su ${applicationName}";
+"Shuffle my downloads in ${applicationName}" = "Riproduci i miei download in ordine casuale su ${applicationName}";
+"Play a song in ${applicationName}" = "Riproduci un brano su ${applicationName}";
+"Shuffle my library in ${applicationName}" = "Riproduci la mia libreria in ordine casuale su ${applicationName}";
+"Shuffle ${applicationName}" = "Ordine casuale su ${applicationName}";
+"Play recently added in ${applicationName}" = "Riproduci gli aggiunti di recente su ${applicationName}";
+"Resume ${applicationName}" = "Riprendi ${applicationName}";
+"Continue listening in ${applicationName}" = "Continua ad ascoltare su ${applicationName}";
+"What's playing in ${applicationName}" = "Cosa sta suonando su ${applicationName}";
+"What's playing on ${applicationName}" = "Cosa sto ascoltando su ${applicationName}";
+"Request a song in ${applicationName}" = "Richiedi un brano su ${applicationName}";
+"Request a song on ${applicationName}" = "Chiedi un brano a ${applicationName}";
+"What's downloading in ${applicationName}" = "Cosa sta scaricando ${applicationName}";
+"Check the downloads in ${applicationName}" = "Controlla i download su ${applicationName}";

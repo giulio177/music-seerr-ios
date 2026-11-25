@@ -9,7 +9,8 @@
       "ScrubberModule",
       "MenuButtonModule",
       "ContextMenuModule",
-      "SwipeLockModule"
+      "SwipeLockModule",
+      "ShortcutsModule"
     ]
   }
 }
