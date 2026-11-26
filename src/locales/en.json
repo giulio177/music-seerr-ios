@@ -17,7 +17,7 @@
     "settings": "Settings"
   },
   "login": {
-    "subtitle": "Sign in to your Music Seerr server",
+    "subtitle": "Sign in to your Sonalis server",
     "server": "Server address",
     "serverPlaceholder": "192.168.1.10:8000",
     "username": "Jellyfin username",
@@ -27,7 +27,7 @@
     "errorServer": "Enter the server address.",
     "errorUnreachable": "The server cannot be reached. Check the address and that this iPhone is on the same network.",
     "errorCredentials": "Wrong username or password.",
-    "errorServerTooOld": "This server is too old for the app. Update Music Seerr on the server.",
+    "errorServerTooOld": "This server is too old for the app. Update Sonalis on the server.",
     "downloadsOnly": "Play downloads only"
   },
   "home": {
@@ -165,9 +165,9 @@
     "off": "Off",
     "otherUsers": "Show other users' activity",
     "serverAddress": "Address",
-    "serverFooter": "The address this iPhone uses to reach Music Seerr. Change it to switch between your home network, a VPN, or a domain.",
+    "serverFooter": "The address this iPhone uses to reach Sonalis. Change it to switch between your home network, a VPN, or a domain.",
     "serverChange": "Server address",
-    "serverChangeBody": "Another address of the same Music Seerr server. You stay signed in.",
+    "serverChangeBody": "Another address of the same Sonalis server. You stay signed in.",
     "serverChanged": "Server address updated",
     "serverOther": "Different server",
     "serverOtherBody": "Your account is not signed in on that server. Sign in there?",
@@ -215,7 +215,7 @@
   },
   "errors": {
     "offlineTitle": "Offline mode",
-    "offlineBody": "The Music Seerr server is unreachable. Your downloaded songs are in the Downloads tab.",
+    "offlineBody": "The Sonalis server is unreachable. Your downloaded songs are in the Downloads tab.",
     "openDownloads": "Open downloads"
   },
   "connect": {
@@ -233,10 +233,10 @@
     "actionFailed": "The server could not be reached."
   },
   "shortcuts": {
-    "signIn": "Sign in to Music Seerr first.",
-    "offline": "The Music Seerr server cannot be reached.",
+    "signIn": "Sign in to Sonalis first.",
+    "offline": "The Sonalis server cannot be reached.",
     "needsAccount": "Sign in with your Jellyfin account to request songs.",
-    "unknown": "This action needs a newer version of Music Seerr.",
+    "unknown": "This action needs a newer version of Sonalis.",
     "failed": "Something went wrong. Try again in the app.",
     "noSong": "Say the name of a song.",
     "songNotFound": "I could not find {{query}}.",

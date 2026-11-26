@@ -17,7 +17,7 @@
     "settings": "Impostazioni"
   },
   "login": {
-    "subtitle": "Accedi al tuo server Music Seerr",
+    "subtitle": "Accedi al tuo server Sonalis",
     "server": "Indirizzo del server",
     "serverPlaceholder": "192.168.1.10:8000",
     "username": "Nome utente Jellyfin",
@@ -27,7 +27,7 @@
     "errorServer": "Inserisci l'indirizzo del server.",
     "errorUnreachable": "Il server non è raggiungibile. Controlla l'indirizzo e che l'iPhone sia sulla stessa rete.",
     "errorCredentials": "Nome utente o password errati.",
-    "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Music Seerr sul server.",
+    "errorServerTooOld": "Questo server è troppo vecchio per l'app. Aggiorna Sonalis sul server.",
     "downloadsOnly": "Ascolta solo i download"
   },
   "home": {
@@ -165,9 +165,9 @@
     "off": "No",
     "otherUsers": "Mostra l'attività degli altri utenti",
     "serverAddress": "Indirizzo",
-    "serverFooter": "L'indirizzo che questo iPhone usa per raggiungere Music Seerr. Cambialo per passare tra rete di casa, VPN o dominio.",
+    "serverFooter": "L'indirizzo che questo iPhone usa per raggiungere Sonalis. Cambialo per passare tra rete di casa, VPN o dominio.",
     "serverChange": "Indirizzo del server",
-    "serverChangeBody": "Un altro indirizzo dello stesso server Music Seerr. Resti connesso.",
+    "serverChangeBody": "Un altro indirizzo dello stesso server Sonalis. Resti connesso.",
     "serverChanged": "Indirizzo del server aggiornato",
     "serverOther": "Server diverso",
     "serverOtherBody": "Il tuo account non ha accesso a quel server. Vuoi accedere lì?",
@@ -215,7 +215,7 @@
   },
   "errors": {
     "offlineTitle": "Modalità offline",
-    "offlineBody": "Il server Music Seerr non è raggiungibile. I brani scaricati sono nella tab Scaricati.",
+    "offlineBody": "Il server Sonalis non è raggiungibile. I brani scaricati sono nella tab Scaricati.",
     "openDownloads": "Apri i download"
   },
   "connect": {
@@ -233,10 +233,10 @@
     "actionFailed": "Il server non è raggiungibile."
   },
   "shortcuts": {
-    "signIn": "Prima accedi a Music Seerr.",
-    "offline": "Il server di Music Seerr non è raggiungibile.",
+    "signIn": "Prima accedi a Sonalis.",
+    "offline": "Il server di Sonalis non è raggiungibile.",
     "needsAccount": "Accedi con il tuo account Jellyfin per richiedere brani.",
-    "unknown": "Questa azione richiede una versione più recente di Music Seerr.",
+    "unknown": "Questa azione richiede una versione più recente di Sonalis.",
     "failed": "Qualcosa è andato storto. Riprova nell'app.",
     "noSong": "Dimmi il nome di un brano.",
     "songNotFound": "Non ho trovato {{query}}.",

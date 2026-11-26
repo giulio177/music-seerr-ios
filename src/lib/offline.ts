@@ -6,7 +6,7 @@ import type { LibraryTrack, Lyrics } from './types';
 
 /**
  * Offline library. Songs live in Documents as `<Artist>/<Album>/<NN> <Title>.<ext>`, which the Files app shows
- * under "On My iPhone > Music Seerr" (UIFileSharingEnabled). Covers and the SQLite metadata stay hidden in
+ * under "On My iPhone > Sonalis" (UIFileSharingEnabled). Covers and the SQLite metadata stay hidden in
  * Library/Application Support. Paths are stored relative, because iOS changes the container path on every update.
  */
 export type OfflineTrack = {
@@ -27,7 +27,7 @@ export type OfflineTrack = {
 };
 
 const musicDir = Paths.document;
-export const supportDir = new Directory(Paths.document.parentDirectory, 'Library', 'Application Support', 'MusicSeerr');
+export const supportDir = new Directory(Paths.document.parentDirectory, 'Library', 'Application Support', 'Sonalis');
 const coverDir = new Directory(supportDir, 'covers');
 const partialDir = new Directory(Paths.cache, 'downloads');
 

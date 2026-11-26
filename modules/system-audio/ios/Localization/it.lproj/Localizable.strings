@@ -1,7 +1,7 @@
 /* App Intents titles, parameters, and options (keys are the English text in the Swift sources). */
 
-"Music Seerr did not answer. Open the app and try again." = "Music Seerr non ha risposto. Apri l'app e riprova.";
-"Open Music Seerr and try again." = "Apri Music Seerr e riprova.";
+"Sonalis did not answer. Open the app and try again." = "Sonalis non ha risposto. Apri l'app e riprova.";
+"Open Sonalis and try again." = "Apri Sonalis e riprova.";
 "Play or Pause" = "Riproduci o metti in pausa";
 "Next Song" = "Brano successivo";
 "Previous Song" = "Brano precedente";
@@ -100,11 +100,11 @@
 "Saves a playlist on this iPhone for offline listening." = "Salva una playlist su questo iPhone, per ascoltarla offline.";
 "Download ${playlist}" = "Scarica ${playlist}";
 "Open Playlist" = "Apri playlist";
-"Opens a playlist in Music Seerr and plays it." = "Apre una playlist in Music Seerr e la riproduce.";
+"Opens a playlist in Sonalis and plays it." = "Apre una playlist in Sonalis e la riproduce.";
 "Open Album" = "Apri album";
-"Opens an album in Music Seerr and plays it." = "Apre un album in Music Seerr e lo riproduce.";
+"Opens an album in Sonalis and plays it." = "Apre un album in Sonalis e lo riproduce.";
 "Recently Added" = "Aggiunti di recente";
-"Plays or pauses Music Seerr, also when the web app is playing." = "Riproduce o mette in pausa Music Seerr, anche quando suona la web app.";
+"Plays or pauses Sonalis, also when the web app is playing." = "Riproduce o mette in pausa Sonalis, anche quando suona la web app.";
 "Skips to the next song." = "Passa al brano successivo.";
 "Goes back to the previous song." = "Torna al brano precedente.";
 "Plays the songs downloaded to this iPhone in random order." = "Riproduce in ordine casuale i brani scaricati su questo iPhone.";

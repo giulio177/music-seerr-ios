@@ -1,14 +1,14 @@
 /* Control Center controls (keys are the English text in the Swift sources). */
 
-"Music Seerr did not answer. Open the app and try again." = "Music Seerr did not answer. Open the app and try again.";
-"Open Music Seerr and try again." = "Open Music Seerr and try again.";
+"Sonalis did not answer. Open the app and try again." = "Sonalis did not answer. Open the app and try again.";
+"Open Sonalis and try again." = "Open Sonalis and try again.";
 "Play or Pause" = "Play or Pause";
 "Next Song" = "Next Song";
 "Previous Song" = "Previous Song";
 "Shuffle Downloads" = "Shuffle Downloads";
 "Shuffle Library" = "Shuffle Library";
 "Plays a random mix of songs from the whole library." = "Plays a random mix of songs from the whole library.";
-"Plays or pauses Music Seerr, also when the web app is playing." = "Plays or pauses Music Seerr, also when the web app is playing.";
+"Plays or pauses Sonalis, also when the web app is playing." = "Plays or pauses Sonalis, also when the web app is playing.";
 "Skips to the next song." = "Skips to the next song.";
 "Goes back to the previous song." = "Goes back to the previous song.";
 "Plays the songs downloaded to this iPhone in random order." = "Plays the songs downloaded to this iPhone in random order.";

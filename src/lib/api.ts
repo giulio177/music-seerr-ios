@@ -30,7 +30,7 @@ export function normalizeServerUrl(input: string) {
 }
 
 /**
- * Addresses to try for what the user typed: as written, then on Music Seerr's default port 8000
+ * Addresses to try for what the user typed: as written, then on Sonalis's default port 8000
  * when an `http://` address names no port (port 80 is rarely where the server listens).
  */
 export function serverCandidates(input: string) {
@@ -92,7 +92,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       credentials: 'omit',
       headers: {
         Accept: 'application/json',
-        'X-Music-Seerr-Client': 'ios',
+        'X-Sonalis-Client': 'ios',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...authHeaders(token),
       },

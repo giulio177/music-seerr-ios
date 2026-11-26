@@ -6,7 +6,7 @@ import WidgetKit
 // app, which plays the audio.
 
 @main
-struct MusicSeerrControls: WidgetBundle {
+struct SonalisControls: WidgetBundle {
   var body: some Widget {
     PlayPauseControl()
     NextTrackControl()
@@ -18,19 +18,19 @@ struct MusicSeerrControls: WidgetBundle {
 
 struct PlayPauseControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
-    StaticControlConfiguration(kind: "io.github.giulio177.musicseerr.control.playpause") {
+    StaticControlConfiguration(kind: "io.github.giulio177.sonalis.control.playpause") {
       ControlWidgetButton(action: TogglePlaybackControlIntent()) {
         Label("Play or Pause", systemImage: "playpause.fill")
       }
     }
     .displayName("Play or Pause")
-    .description("Plays or pauses Music Seerr, also when the web app is playing.")
+    .description("Plays or pauses Sonalis, also when the web app is playing.")
   }
 }
 
 struct NextTrackControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
-    StaticControlConfiguration(kind: "io.github.giulio177.musicseerr.control.next") {
+    StaticControlConfiguration(kind: "io.github.giulio177.sonalis.control.next") {
       ControlWidgetButton(action: NextTrackControlIntent()) {
         Label("Next Song", systemImage: "forward.fill")
       }
@@ -42,7 +42,7 @@ struct NextTrackControl: ControlWidget {
 
 struct PreviousTrackControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
-    StaticControlConfiguration(kind: "io.github.giulio177.musicseerr.control.previous") {
+    StaticControlConfiguration(kind: "io.github.giulio177.sonalis.control.previous") {
       ControlWidgetButton(action: PreviousTrackControlIntent()) {
         Label("Previous Song", systemImage: "backward.fill")
       }
@@ -54,7 +54,7 @@ struct PreviousTrackControl: ControlWidget {
 
 struct ShuffleDownloadsControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
-    StaticControlConfiguration(kind: "io.github.giulio177.musicseerr.control.downloads") {
+    StaticControlConfiguration(kind: "io.github.giulio177.sonalis.control.downloads") {
       ControlWidgetButton(action: ShuffleDownloadsControlIntent()) {
         Label("Shuffle Downloads", systemImage: "arrow.down.circle.fill")
       }
@@ -66,7 +66,7 @@ struct ShuffleDownloadsControl: ControlWidget {
 
 struct ShuffleLibraryControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
-    StaticControlConfiguration(kind: "io.github.giulio177.musicseerr.control.library") {
+    StaticControlConfiguration(kind: "io.github.giulio177.sonalis.control.library") {
       ControlWidgetButton(action: ShuffleLibraryControlIntent()) {
         Label("Shuffle Library", systemImage: "shuffle")
       }

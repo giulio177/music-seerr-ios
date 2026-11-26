@@ -1,4 +1,4 @@
-/* Siri phrases of MusicSeerrShortcuts; every phrase must keep ${applicationName}. */
+/* Siri phrases of SonalisShortcuts; every phrase must keep ${applicationName}. */
 
 "Play ${playlist} in ${applicationName}" = "Play ${playlist} in ${applicationName}";
 "Play the playlist ${playlist} in ${applicationName}" = "Play the playlist ${playlist} in ${applicationName}";

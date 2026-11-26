@@ -32,11 +32,11 @@ enum Bridge {
     } catch IntentBridgeError.message(let text) {
       throw ShortcutError(message: text)
     } catch {
-      throw ShortcutError(message: String(localized: "Music Seerr did not answer. Open the app and try again."))
+      throw ShortcutError(message: String(localized: "Sonalis did not answer. Open the app and try again."))
     }
     return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
 #else
-    throw ShortcutError(message: String(localized: "Open Music Seerr and try again."))
+    throw ShortcutError(message: String(localized: "Open Sonalis and try again."))
 #endif
   }
 

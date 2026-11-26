@@ -4,7 +4,7 @@ import CoreSpotlight
 import Foundation
 
 // Playlists, albums, and artists for Shortcuts parameters, Siri phrases, and Spotlight. The app's JavaScript writes
-// them to `Application Support/MusicSeerr/shortcuts.json` (`src/lib/shortcuts.ts`), so pickers work even when the
+// them to `Application Support/Sonalis/shortcuts.json` (`src/lib/shortcuts.ts`), so pickers work even when the
 // app is not running and the server cannot be reached.
 
 struct CatalogItem: Codable {
@@ -20,7 +20,7 @@ struct Catalog: Codable {
 
   static func load() -> Catalog {
     guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return Catalog() }
-    let url = support.appendingPathComponent("MusicSeerr/shortcuts.json")
+    let url = support.appendingPathComponent("Sonalis/shortcuts.json")
     guard let data = try? Data(contentsOf: url), let catalog = try? JSONDecoder().decode(Catalog.self, from: data) else { return Catalog() }
     return catalog
   }
@@ -248,12 +248,12 @@ enum QueuePosition: String, AppEnum {
 // MARK: - Spotlight and Siri phrases
 
 /// Called from `ShortcutsModule.catalogChanged` (by name, the pod cannot import the app target).
-@objc(MusicSeerrIntentsHost)
+@objc(SonalisIntentsHost)
 final class IntentsHost: NSObject {
   @objc static func catalogChanged() {
     guard #available(iOS 26.0, *) else { return }
     Task.detached(priority: .utility) {
-      MusicSeerrShortcuts.updateAppShortcutParameters()
+      SonalisShortcuts.updateAppShortcutParameters()
       await reindexSpotlight()
     }
   }
@@ -261,7 +261,7 @@ final class IntentsHost: NSObject {
   @available(iOS 26.0, *)
   private static func reindexSpotlight() async {
     let catalog = Catalog.load()
-    let index = CSSearchableIndex(name: "MusicSeerr")
+    let index = CSSearchableIndex(name: "Sonalis")
     do {
       try await index.deleteAllSearchableItems()
       try await index.indexAppEntities(catalog.playlists.map(PlaylistEntity.init))

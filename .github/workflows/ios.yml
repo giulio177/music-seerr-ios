@@ -71,8 +71,8 @@ jobs:
           if [ "$VARIANT" = development ]; then CONFIG=Debug; else CONFIG=Release; fi
           set -o pipefail
           xcodebuild \
-            -workspace ios/MusicSeerr.xcworkspace \
-            -scheme MusicSeerr \
+            -workspace ios/Sonalis.xcworkspace \
+            -scheme Sonalis \
             -configuration "$CONFIG" \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
@@ -80,16 +80,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | tail -n 80
           mkdir -p Payload
-          cp -R "build/Build/Products/${CONFIG}-iphoneos/MusicSeerr.app" Payload/
+          cp -R "build/Build/Products/${CONFIG}-iphoneos/Sonalis.app" Payload/
           SUFFIX=$([ "$VARIANT" = development ] && echo "-dev" || echo "")
-          IPA="MusicSeerr${SUFFIX}.ipa"
+          IPA="Sonalis${SUFFIX}.ipa"
           zip -qry "$IPA" Payload
           echo "IPA=$IPA" >> "$GITHUB_ENV"
           ls -lh "$IPA"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MusicSeerr-${{ env.VARIANT }}-${{ env.APP_VERSION }}-${{ github.run_number }}
+          name: Sonalis-${{ env.VARIANT }}-${{ env.APP_VERSION }}-${{ github.run_number }}
           path: ${{ env.IPA }}
           retention-days: 30
 
@@ -103,4 +103,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" "$IPA" altstore-source.json \
-            --title "Music Seerr iOS $APP_VERSION" --generate-notes
+            --title "Sonalis iOS $APP_VERSION" --generate-notes

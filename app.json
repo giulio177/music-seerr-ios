@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "Music Seerr",
-    "slug": "music-seerr-ios",
+    "name": "Sonalis",
+    "slug": "sonalis-ios",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "musicseerr",
+    "scheme": "sonalis",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#09090d",
     "ios": {
-      "bundleIdentifier": "io.github.giulio177.musicseerr",
+      "bundleIdentifier": "io.github.giulio177.sonalis",
       "supportsTablet": false,
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "NSLocalNetworkUsageDescription": "Music Seerr connects to your Music Seerr server on your home network.",
+        "NSLocalNetworkUsageDescription": "Sonalis connects to your Sonalis server on your home network.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true

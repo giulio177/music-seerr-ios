@@ -416,7 +416,7 @@ struct DownloadPlaylistIntent: AppIntent {
 @available(iOS 26.0, *)
 struct OpenPlaylistIntent: OpenIntent {
   static let title: LocalizedStringResource = "Open Playlist"
-  static let description = IntentDescription("Opens a playlist in Music Seerr and plays it.")
+  static let description = IntentDescription("Opens a playlist in Sonalis and plays it.")
 
   @Parameter(title: "Playlist")
   var target: PlaylistEntity
@@ -431,7 +431,7 @@ struct OpenPlaylistIntent: OpenIntent {
 @available(iOS 26.0, *)
 struct OpenAlbumIntent: OpenIntent {
   static let title: LocalizedStringResource = "Open Album"
-  static let description = IntentDescription("Opens an album in Music Seerr and plays it.")
+  static let description = IntentDescription("Opens an album in Sonalis and plays it.")
 
   @Parameter(title: "Album")
   var target: AlbumEntity
@@ -447,7 +447,7 @@ struct OpenAlbumIntent: OpenIntent {
 /// Phrases Siri knows without setup. Every phrase names the app (required for apps without the Siri entitlement,
 /// which a free Apple ID cannot get). Italian phrases are in AppShortcuts.strings.
 @available(iOS 26.0, *)
-struct MusicSeerrShortcuts: AppShortcutsProvider {
+struct SonalisShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
       intent: PlayPlaylistIntent(),

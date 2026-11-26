@@ -1,4 +1,4 @@
-// A stand-in Music Seerr server with made-up data, for screenshots and UI tests.
+// A stand-in Sonalis server with made-up data, for screenshots and UI tests.
 // Usage: node scripts/mock-server.mjs [port]   (default 8787; any username and password sign in)
 import { createServer } from 'node:http';
 
@@ -261,4 +261,4 @@ createServer(async (req, res) => {
   if (path.startsWith('/api/history/plays/')) return json(res, 200, { listened_seconds: 0, duration: 0 });
   if (path === '/api/auth/logout') return json(res, 200, { success: true });
   return json(res, 404, { detail: 'Not found' });
-}).listen(port, '0.0.0.0', () => console.log(`Mock Music Seerr server on http://0.0.0.0:${port}`));
+}).listen(port, '0.0.0.0', () => console.log(`Mock Sonalis server on http://0.0.0.0:${port}`));

@@ -116,7 +116,7 @@ public class ShortcutsModule: Module {
     /// The host class lives in the app target, which this pod cannot import, so it is looked up by name.
     Function("catalogChanged") {
       let selector = NSSelectorFromString("catalogChanged")
-      if let host = NSClassFromString("MusicSeerrIntentsHost") as? NSObject.Type, host.responds(to: selector) {
+      if let host = NSClassFromString("SonalisIntentsHost") as? NSObject.Type, host.responds(to: selector) {
         _ = host.perform(selector)
       }
     }

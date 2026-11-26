@@ -25,8 +25,8 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild \
-            -workspace ios/MusicSeerr.xcworkspace \
-            -scheme MusicSeerr \
+            -workspace ios/Sonalis.xcworkspace \
+            -scheme Sonalis \
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
@@ -46,7 +46,7 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
-          xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/MusicSeerr.app
+          xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/Sonalis.app
 
       - name: Start the mock server
         run: |
@@ -57,17 +57,17 @@ jobs:
       - name: Smoke launch
         run: |
           mkdir -p screenshots
-          (xcrun simctl launch --console-pty "$UDID" io.github.giulio177.musicseerr > screenshots/console.log 2>&1 &)
+          (xcrun simctl launch --console-pty "$UDID" io.github.giulio177.sonalis > screenshots/console.log 2>&1 &)
           sleep 25
           xcrun simctl io "$UDID" screenshot screenshots/00-smoke.png
-          xcrun simctl spawn "$UDID" launchctl list | grep -i musicseerr || echo "APP NOT RUNNING"
+          xcrun simctl spawn "$UDID" launchctl list | grep -i sonalis || echo "APP NOT RUNNING"
           echo "--- console"; tail -n 80 screenshots/console.log
           echo "--- crash reports"
-          ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i musicseerr | head -3 | while read f; do
+          ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i sonalis | head -3 | while read f; do
             cp ~/Library/Logs/DiagnosticReports/"$f" screenshots/
             head -c 6000 ~/Library/Logs/DiagnosticReports/"$f"
           done
-          xcrun simctl terminate "$UDID" io.github.giulio177.musicseerr || true
+          xcrun simctl terminate "$UDID" io.github.giulio177.sonalis || true
 
       - name: Install Maestro
         run: |
@@ -83,7 +83,7 @@ jobs:
           mkdir -p screenshots
           xcrun simctl io "$UDID" screenshot screenshots/zz-failure.png
           xcrun simctl spawn "$UDID" log show --last 15m --style compact \
-            --predicate 'process == "MusicSeerr" OR subsystem == "com.facebook.react.log"' > screenshots/app.log || true
+            --predicate 'process == "Sonalis" OR subsystem == "com.facebook.react.log"' > screenshots/app.log || true
           tail -n 150 screenshots/app.log
 
       - uses: actions/upload-artifact@v4

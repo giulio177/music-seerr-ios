@@ -1,11 +1,11 @@
-# Music Seerr for iOS
+# Sonalis for iOS
 
-[![Release](https://img.shields.io/github/v/release/giulio177/music-seerr-ios?sort=semver)](https://github.com/giulio177/music-seerr-ios/releases)
-[![iOS build](https://github.com/giulio177/music-seerr-ios/actions/workflows/ios.yml/badge.svg)](https://github.com/giulio177/music-seerr-ios/actions/workflows/ios.yml)
+[![Release](https://img.shields.io/github/v/release/giulio177/sonalis-ios?sort=semver)](https://github.com/giulio177/sonalis-ios/releases)
+[![iOS build](https://github.com/giulio177/sonalis-ios/actions/workflows/ios.yml/badge.svg)](https://github.com/giulio177/sonalis-ios/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/giulio17)
 
-iPhone client for [Music Seerr](https://github.com/giulio177/music-seerr), the self-hosted music request and playback server for Jellyfin.
+iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-hosted music request and playback server for Jellyfin.
 
 > Beta. iOS only (iPhone; no iPad or Android app). Not on the App Store: installed by sideloading with [SideStore](https://sidestore.io) or [AltStore](https://altstore.io) using a free Apple ID.
 
@@ -19,7 +19,7 @@ iPhone client for [Music Seerr](https://github.com/giulio177/music-seerr), the s
 
 ### Browse and request
 
-- **Sign in** with your Jellyfin account (or as a guest) on your Music Seerr server.
+- **Sign in** with your Jellyfin account (or as a guest) on your Sonalis server.
 - **Home feed** with recently played tracks, playlists, and Picked for you recommendations.
 - **Library browsing** for playlists, artists, albums, songs, and Recently Added albums.
 - **Search and request**: preview 30-second catalog clips, request missing songs or albums, and monitor the live server download queue (cancel, retry, or dismiss jobs).
@@ -53,7 +53,7 @@ iPhone client for [Music Seerr](https://github.com/giulio177/music-seerr), the s
 | --- | --- |
 | Device | iPhone only (no iPad or Android app) |
 | iOS | **iOS 26 or later** required for the full experience (tab bar mini player, Siri, Shortcuts, Control Center, Action button, and Spotlight). The IPA declares a minimum of iOS 16.4, so older versions install without those features. |
-| Music Seerr server | `v0.9.0` or later for sign-in; `v0.11.1` or later for shared playback, Recently Added, and live synced preferences |
+| Sonalis server | `v0.1.0` or later |
 | Sideloading | [SideStore](https://sidestore.io) or [AltStore](https://altstore.io) with a free Apple ID |
 
 ## Install
@@ -62,13 +62,13 @@ iPhone client for [Music Seerr](https://github.com/giulio177/music-seerr), the s
 2. Add this source in SideStore or AltStore:
 
    ```
-   https://github.com/giulio177/music-seerr-ios/releases/latest/download/altstore-source.json
+   https://github.com/giulio177/sonalis-ios/releases/latest/download/altstore-source.json
    ```
 
-3. Install **Music Seerr** from the source.
+3. Install **Sonalis** from the source.
    - When prompted about app extensions, choose **Keep App Extensions** to enable the Control Center buttons (uses one extra App ID), or skip it to save an App ID.
-   - Alternatively, download `MusicSeerr.ipa` from the [latest release](https://github.com/giulio177/music-seerr-ios/releases/latest) and open it in SideStore or AltStore.
-4. Open Music Seerr and enter your server address (for example `192.168.1.10:8000`; an `http://` address without a port tries `:8000` automatically).
+   - Alternatively, download `Sonalis.ipa` from the [latest release](https://github.com/giulio177/sonalis-ios/releases/latest) and open it in SideStore or AltStore.
+4. Open Sonalis and enter your server address (for example `192.168.1.10:8000`; an `http://` address without a port tries `:8000` automatically).
 
 With a free Apple ID, sideloaded apps expire after 7 days. SideStore and AltStore refresh them in the background, and **Settings > Signature** shows the days remaining.
 
@@ -85,7 +85,7 @@ With a free Apple ID, sideloaded apps expire after 7 days. SideStore and AltStor
 | --- | --- |
 | Background audio, lock screen controls, AirPlay, Bluetooth | CarPlay (requires an Apple entitlement) |
 | Offline downloads and Files app access | Push notifications |
-| Siri phrases naming the app ("Play my downloads in Music Seerr"), Shortcuts, Control Center, Action button, Spotlight | Siri requests without the app name ("Play Road Trip") |
+| Siri phrases naming the app ("Play my downloads in Sonalis"), Shortcuts, Control Center, Action button, Spotlight | Siri requests without the app name ("Play Road Trip") |
 
 A free Apple ID allows up to 3 active sideloaded apps and 10 App IDs per week. Keeping the Control Center extension uses one extra App ID; the main app works fine without it.
 
@@ -121,8 +121,8 @@ npx expo lint           # lint
 
 Because the app includes native modules, Expo Go is not supported:
 
-1. Grab `MusicSeerr-dev.ipa` from a `main` run of the **iOS build** workflow (or trigger the workflow manually with the `development` variant).
-2. Install `MusicSeerr-dev.ipa` with SideStore or AltStore.
+1. Grab `Sonalis-dev.ipa` from a `main` run of the **iOS build** workflow (or trigger the workflow manually with the `development` variant).
+2. Install `Sonalis-dev.ipa` with SideStore or AltStore.
 3. Run `npx expo start` and connect from the app for live JavaScript reloads.
 
 ## Builds and releases
@@ -131,9 +131,9 @@ Because the app includes native modules, Expo Go is not supported:
 
 | Trigger | Result |
 | --- | --- |
-| Push to `main` | Release (`MusicSeerr.ipa`) and development (`MusicSeerr-dev.ipa`) builds as workflow artifacts |
+| Push to `main` | Release (`Sonalis.ipa`) and development (`Sonalis-dev.ipa`) builds as workflow artifacts |
 | Pull request | Release build as a workflow artifact |
-| Tag `vX.Y.Z` | GitHub release with `MusicSeerr.ipa` and `altstore-source.json` |
+| Tag `vX.Y.Z` | GitHub release with `Sonalis.ipa` and `altstore-source.json` |
 | Manual run | Release or development build as a workflow artifact |
 
 Versions follow Semantic Versioning; the git tag is the version source.
@@ -145,11 +145,11 @@ Versions follow Semantic Versioning; the git tag is the version source.
 
 ## Support
 
-Music Seerr for iOS is free and developed in spare time. If it is useful to you, you can [buy me a coffee](https://buymeacoffee.com/giulio17). Bug reports and feedback in [Issues](https://github.com/giulio177/music-seerr-ios/issues) help just as much.
+Sonalis for iOS is free and developed in spare time. If it is useful to you, you can [buy me a coffee](https://buymeacoffee.com/giulio17). Bug reports and feedback in [Issues](https://github.com/giulio177/sonalis-ios/issues) help just as much.
 
 ## Disclaimer
 
-Music Seerr for iOS is beta software built with AI-assisted coding and has received limited validation. Music Seerr is not affiliated with Jellyfin or Apple.
+Sonalis for iOS is beta software built with AI-assisted coding and has received limited validation. Sonalis is not affiliated with Jellyfin or Apple.
 
 ## License
 

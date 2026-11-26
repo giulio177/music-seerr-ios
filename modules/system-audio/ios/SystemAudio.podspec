@@ -1,13 +1,13 @@
 Pod::Spec.new do |s|
   s.name           = 'SystemAudio'
   s.version        = '1.0.0'
-  s.summary        = 'Native views and the App Intents bridge for Music Seerr'
+  s.summary        = 'Native views and the App Intents bridge for Sonalis'
   s.description    = s.summary
-  s.author         = 'Music Seerr'
-  s.homepage       = 'https://github.com/giulio177/music-seerr-ios'
+  s.author         = 'Sonalis'
+  s.homepage       = 'https://github.com/giulio177/sonalis-ios'
   s.license        = 'MIT'
   s.platforms      = { :ios => '15.1' }
-  s.source         = { git: 'https://github.com/giulio177/music-seerr-ios.git' }
+  s.source         = { git: 'https://github.com/giulio177/sonalis-ios.git' }
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'

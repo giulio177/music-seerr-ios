@@ -1,4 +1,4 @@
-"""Draws the app icon and splash mark (the Music Seerr eye: dark iris inside rings of light).
+"""Draws the app icon and splash mark (the Sonalis eye: dark iris inside rings of light).
 
 Usage: python3 scripts/make-icons.py  (needs Pillow)
 """

@@ -3,8 +3,8 @@
 /** @type {import('@bacons/apple-targets/app.plugin').Config} */
 module.exports = {
   type: 'widget',
-  name: 'MusicSeerrControls',
-  displayName: 'Music Seerr',
+  name: 'SonalisControls',
+  displayName: 'Sonalis',
   bundleIdentifier: '.controls',
   deploymentTarget: '26.0',
   frameworks: ['SwiftUI', 'WidgetKit', 'AppIntents'],

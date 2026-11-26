@@ -320,7 +320,7 @@ async function open() {
   const url = `${serverUrl.replace(/^http/i, 'ws')}/api/playback/ws`;
   // React Native's WebSocket takes headers as a third argument (not in the DOM typings).
   const Ctor = WebSocket as unknown as new (url: string, protocols: string[] | null, options: { headers: Record<string, string> }) => WebSocket;
-  const ws = new Ctor(url, null, { headers: { Authorization: `Bearer ${token}`, 'X-Music-Seerr-Client': 'ios' } });
+  const ws = new Ctor(url, null, { headers: { Authorization: `Bearer ${token}`, 'X-Sonalis-Client': 'ios' } });
   socket = ws;
   ws.onopen = () => {
     retryDelay = 1000;

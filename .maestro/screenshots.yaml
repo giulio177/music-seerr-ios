@@ -1,6 +1,6 @@
 # Walks through the app against scripts/mock-server.mjs (port 8787) with the simulator in Italian,
 # saving a screenshot of each screen. Run by .github/workflows/screenshots.yml.
-appId: io.github.giulio177.musicseerr
+appId: io.github.giulio177.sonalis
 ---
 - launchApp:
     clearState: true

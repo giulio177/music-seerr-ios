@@ -57,7 +57,7 @@ export default function Login() {
               <View style={[styles.logoGlow, { shadowColor: accent }]}>
                 <Image source={require('../../assets/splash-icon.png')} style={styles.logo} />
               </View>
-              <Text style={styles.title}>Music Seerr</Text>
+              <Text style={styles.title}>Sonalis</Text>
               <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
             </View>
             <Glass style={styles.card}>
