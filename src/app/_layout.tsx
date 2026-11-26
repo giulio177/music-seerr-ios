@@ -14,6 +14,7 @@ import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { startShortcuts } from '@/lib/shortcuts';
 import { onAppActive } from '@/lib/updates';
+import { useBeta } from '@/lib/beta';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -61,6 +62,7 @@ export default function RootLayout() {
     }
     loadSession();
     onAppActive().catch(() => undefined);
+    useBeta.getState().load();
     // Never leave the splash screen up, whatever happens during startup.
     const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), 5000);
     return () => clearTimeout(timer);
@@ -106,6 +108,14 @@ export default function RootLayout() {
                 presentation: 'modal',
                 contentStyle: { backgroundColor: colors.bg },
               }}
+            />
+            <Stack.Screen
+              name="add-to-playlist"
+              options={{ presentation: 'formSheet', sheetAllowedDetents: [0.6, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.bg } }}
+            />
+            <Stack.Screen
+              name="lyrics-editor"
+              options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }}
             />
             <Stack.Screen
               name="settings"

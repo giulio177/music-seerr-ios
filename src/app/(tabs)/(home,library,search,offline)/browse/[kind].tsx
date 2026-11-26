@@ -2,17 +2,20 @@ import type { TFunction } from 'i18next';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Cover } from '@/components/Cover';
 import { Tile } from '@/components/Shelf';
+import { Symbol } from '@/components/Symbol';
+import { toast } from '@/components/Toast';
 import { TrackRow } from '@/components/TrackRow';
 import { AccentButton, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { downloadedAlbums, downloadedArtists, sortDownloaded } from '@/lib/downloads';
 import { localCoverUri, offlineToLibrary, useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
+import { createPlaylist } from '@/lib/playlistPicker';
 import { usePlaylists } from '@/lib/playlists';
-import { colors } from '@/lib/theme';
+import { colors, useAccent, withAlpha } from '@/lib/theme';
 import type { Album, Artist, LibraryTrack, Playlist } from '@/lib/types';
 
 type Kind = 'playlists' | 'artists' | 'albums' | 'songs';
@@ -145,6 +148,33 @@ function ServerList({ kind, query }: { kind: Kind; query: string }) {
       onEndReached={() => {
         if (!loading && kind !== 'playlists' && items.length < total) load('more', items.length);
       }}
+      onCreate={
+        kind === 'playlists'
+          ? () =>
+              Alert.prompt(
+                t('playlistPicker.new'),
+                t('playlistPicker.nameHint'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('playlistPicker.create'),
+                    onPress: async (value?: string) => {
+                      const name = (value ?? '').trim();
+                      if (!name) return;
+                      try {
+                        await createPlaylist(name, null);
+                        toast(t('playlistPicker.created', { name }));
+                        load('refresh');
+                      } catch (e) {
+                        toast(e instanceof ApiError && e.offline ? t('track.playlistOffline') : t('playlistPicker.failed'));
+                      }
+                    },
+                  },
+                ],
+                'plain-text',
+              )
+          : undefined
+      }
     />
   );
 }
@@ -212,14 +242,18 @@ function EntryList({
   refreshing,
   onRefresh,
   onEndReached,
+  onCreate,
 }: {
   kind: Kind;
   items: Entry[];
   refreshing?: boolean;
   onRefresh?: () => void;
   onEndReached?: () => void;
+  /** Library playlists: a New Playlist row first. */
+  onCreate?: () => void;
 }) {
   const { t } = useTranslation();
+  const { accent } = useAccent();
   const { width } = useWindowDimensions();
   const tile = (width - 16 * 3) / 2;
   const grid = kind === 'albums';
@@ -250,6 +284,13 @@ function EntryList({
               style={{ flex: 1 }}
             />
           </View>
+        ) : onCreate ? (
+          <Pressable onPress={onCreate} style={({ pressed }) => [styles.row, pressed && { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+            <View style={[styles.newIcon, { backgroundColor: withAlpha(accent, 0.18) }]}>
+              <Symbol name="plus" fallback="add" size={24} color={accent} />
+            </View>
+            <Text style={[styles.newTitle, { color: accent }]}>{t('playlistPicker.new')}</Text>
+          </Pressable>
         ) : undefined
       }
       renderItem={({ item, index }) => {
@@ -276,6 +317,8 @@ function EntryList({
 }
 
 const styles = StyleSheet.create({
+  newIcon: { width: 56, height: 56, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  newTitle: { fontSize: 17, fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 7 },
   name: { color: colors.text, fontSize: 17, fontWeight: '500' },

@@ -34,6 +34,8 @@ type PlaylistState = {
   remember: (playlist: SavedPlaylist) => void;
   /** Bumped when a playlist changes here, so its open page reloads. */
   revisions: Record<string, number>;
+  /** A playlist gained songs here: reload its open page and the saved song IDs. */
+  changed: (playlistId: string) => void;
   /** Removes one entry from the Jellyfin playlist (throws `ApiError`). */
   removeEntry: (playlistId: string, track: LibraryTrack) => Promise<void>;
 };
@@ -43,6 +45,10 @@ let running: Promise<void> | null = null;
 export const usePlaylists = create<PlaylistState>((set, get) => ({
   playlists: read(),
   revisions: {},
+  changed: (playlistId) => {
+    set({ revisions: { ...get().revisions, [playlistId]: (get().revisions[playlistId] ?? 0) + 1 } });
+    get().refresh();
+  },
   removeEntry: async (playlistId, track) => {
     if (!track.playlist_entry_id) return;
     await api(`/api/jellyfin/playlist/${playlistId}/items/${encodeURIComponent(track.playlist_entry_id)}`, { method: 'DELETE' });

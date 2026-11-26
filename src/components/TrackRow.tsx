@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from '@/lib/format';
 import { albumCoverPath, ApiError, authHeaders } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { localCoverUri, useOffline } from '@/lib/offline';
+import { openAddToPlaylist } from '@/lib/playlistPicker';
 import { usePlayer } from '@/lib/player';
 import { usePlaylists } from '@/lib/playlists';
 import { colors, useAccent } from '@/lib/theme';
@@ -57,6 +59,18 @@ export function trackMenuItems(
         },
       },
     );
+  }
+  const { status, user } = useAuth.getState();
+  if (status === 'signedIn' && user && !user.is_guest) {
+    items.push({
+      id: 'addToPlaylist',
+      title: t('track.addToPlaylist'),
+      systemImage: 'text.badge.plus',
+      run: () => {
+        if (useAuth.getState().unreachable) toast(t('track.playlistOffline'));
+        else openAddToPlaylist({ kind: 'tracks', tracks: [track] });
+      },
+    });
   }
   if (track.album_id) {
     items.push({ id: 'album', title: t('track.goToAlbum'), systemImage: 'square.stack', group: 1, run: () => navigate(`/album/${track.album_id}`) });

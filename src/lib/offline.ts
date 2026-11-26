@@ -254,7 +254,15 @@ type OfflineState = {
   tracks: Record<string, OfflineTrack>;
   /** Progress (0-1), queued, or failed, per track ID while downloading. */
   active: Record<string, DownloadState>;
+  /** The songs in `active`, in request order, so Downloads can list them while they download. */
+  pending: Record<string, LibraryTrack>;
   refresh: () => void;
+  /** Queues the failed downloads again. */
+  retryFailed: () => void;
+  /** Forgets the failed downloads. */
+  clearFailed: () => void;
+  /** Stores edited synced lyrics with a downloaded song. */
+  updateLyrics: (id: string, synced: string) => void;
   download: (tracks: LibraryTrack[]) => void;
   remove: (id: string) => void;
   removeAll: () => void;
@@ -340,8 +348,10 @@ function pump() {
       .then((row) => {
         useOffline.setState((s) => {
           const active = { ...s.active };
+          const pending = { ...s.pending };
           delete active[track.id];
-          return { active, tracks: { ...s.tracks, [row.id]: row } };
+          delete pending[track.id];
+          return { active, pending, tracks: { ...s.tracks, [row.id]: row } };
         });
       })
       .catch(() => setActive('error'))
@@ -355,6 +365,7 @@ function pump() {
 export const useOffline = create<OfflineState>((set, get) => ({
   tracks: {},
   active: {},
+  pending: {},
 
   refresh: () => {
     const rows = database().getAllSync<OfflineTrack>('SELECT * FROM tracks');
@@ -368,17 +379,43 @@ export const useOffline = create<OfflineState>((set, get) => ({
   },
 
   download: (tracks) => {
-    const { tracks: saved, active } = get();
+    const { tracks: saved, active, pending } = get();
     const next = { ...active };
+    const nextPending = { ...pending };
     for (const track of tracks) {
       const state = active[track.id];
       if (saved[track.id] || (state !== undefined && state !== 'error')) continue;
       next[track.id] = 'queued';
+      nextPending[track.id] = track;
       queue.push(track);
     }
-    set({ active: next });
+    set({ active: next, pending: nextPending });
     pump();
   },
+
+  retryFailed: () => {
+    const { active, pending } = get();
+    get().download(Object.keys(active).filter((id) => active[id] === 'error' && pending[id]).map((id) => pending[id]));
+  },
+
+  updateLyrics: (id, synced) => {
+    const track = get().tracks[id];
+    if (!track) return;
+    database().runSync('UPDATE tracks SET lyrics_synced = ? WHERE id = ?', synced, id);
+    set((s) => ({ tracks: { ...s.tracks, [id]: { ...track, lyrics_synced: synced } } }));
+  },
+
+  clearFailed: () =>
+    set((s) => {
+      const active = { ...s.active };
+      const pending = { ...s.pending };
+      for (const id of Object.keys(active)) {
+        if (active[id] !== 'error') continue;
+        delete active[id];
+        delete pending[id];
+      }
+      return { active, pending };
+    }),
 
   remove: (id) => {
     const track = get().tracks[id];
@@ -417,7 +454,7 @@ export const useOffline = create<OfflineState>((set, get) => ({
       // Ignore.
     }
     database().runSync('DELETE FROM tracks');
-    set({ tracks: {}, active: {} });
+    set({ tracks: {}, active: {}, pending: {} });
   },
 
   totalSize: () => Object.values(get().tracks).reduce((sum, t) => sum + (t.size || 0), 0),

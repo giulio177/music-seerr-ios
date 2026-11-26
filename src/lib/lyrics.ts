@@ -50,6 +50,11 @@ export function parseLrc(lrc: string): LyricLine[] {
 
 const cache = new Map<string, Lyrics | null>();
 
+/** Replaces the cached lyrics of a song after an edit, so the player shows them at once. */
+export function setCachedLyrics(id: string, lyrics: Lyrics) {
+  cache.set(id, lyrics);
+}
+
 /** Lyrics of the current song: downloaded copy first, then the server (cached per song). */
 export function useLyrics(item?: QueueItem) {
   const id = item?.kind === 'library' ? item.id : undefined;

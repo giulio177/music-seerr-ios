@@ -3,10 +3,13 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { isRunning, useDownloadQueue } from '@/lib/downloadQueue';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
+import { openAddToPlaylist } from '@/lib/playlistPicker';
 import type { DownloadJob } from '@/lib/types';
 import { Cover } from './Cover';
+import { ContextMenu, hasNativeContextMenu, showActionSheet, type MenuItem } from './Menu';
 import { Symbol } from './Symbol';
 import { toast } from './Toast';
 
@@ -73,8 +76,30 @@ function JobRow({ job }: { job: DownloadJob }) {
     }
   };
 
+  const canCancel = running && (job.status === 'pending' || job.status === 'downloading');
+  const user = useAuth((st) => st.user);
+  const items: MenuItem[] = [];
+  // Running songs go in the playlist when their download finishes; finished ones at once.
+  if (user && !user.is_guest && (running || done)) {
+    items.push({
+      id: 'addToPlaylist',
+      title: t('track.addToPlaylist'),
+      systemImage: 'text.badge.plus',
+      run: () => openAddToPlaylist({ kind: 'job', job }),
+    });
+  }
+  if (canCancel) items.push({ id: 'cancel', title: t('queue.cancel'), systemImage: 'xmark.circle', destructive: true, group: 1, run: () => act('cancel') });
+  if (failed) {
+    items.push({ id: 'retry', title: t('queue.retry'), systemImage: 'arrow.clockwise', group: 1, run: () => act('retry') });
+    items.push({ id: 'dismiss', title: t('queue.dismiss'), systemImage: 'trash', destructive: true, group: 1, run: () => act('dismiss') });
+  }
+
   return (
-    <View style={styles.row}>
+    <ContextMenu items={items} previewTitle={job.track.title} previewSubtitle={job.track.artist} previewImages={job.track.cover_url ? [job.track.cover_url] : []}>
+    <Pressable
+      onLongPress={hasNativeContextMenu || !items.length ? undefined : () => showActionSheet(items, t('common.cancel'), job.track.title, job.track.artist)}
+      style={styles.row}
+    >
       <Cover path={job.track.cover_url} size={44} />
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.song}>
@@ -91,7 +116,7 @@ function JobRow({ job }: { job: DownloadJob }) {
           </View>
         ) : null}
       </View>
-      {running && (job.status === 'pending' || job.status === 'downloading') ? (
+      {canCancel ? (
         <IconAction symbol="xmark.circle" fallback="close-circle-outline" label={t('queue.cancel')} onPress={() => act('cancel')} />
       ) : null}
       {failed ? (
@@ -105,7 +130,8 @@ function JobRow({ job }: { job: DownloadJob }) {
           <Symbol name="checkmark" fallback="checkmark" size={14} color={accent} />
         </View>
       ) : null}
-    </View>
+    </Pressable>
+    </ContextMenu>
   );
 }
 

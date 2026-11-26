@@ -88,7 +88,8 @@
     "removedFromPlaylist": "Removed from the playlist",
     "removeFromPlaylistFailed": "Could not remove the song from the playlist",
     "playlistNotYours": "You can only edit your own playlists",
-    "playlistOffline": "The server is not reachable"
+    "playlistOffline": "The server is not reachable",
+    "addToPlaylist": "Add to playlist"
   },
   "search": {
     "placeholder": "Songs, artists, albums",
@@ -211,7 +212,13 @@
     "signingDays_other": "In {{count}} days",
     "signingToday": "Today",
     "signingExpired": "Expired",
-    "signingFooter": "Apps signed with a free Apple ID stop opening after 7 days. Install the app again with Impactor or refresh it in SideStore before then: login and downloads are kept."
+    "signingFooter": "Apps signed with a free Apple ID stop opening after 7 days. Install the app again with Impactor or refresh it in SideStore before then: login and downloads are kept.",
+    "permissions": "Permissions",
+    "lyricsUsers": "Users can edit lyrics",
+    "lyricsUsersFooter": "Lets every Jellyfin account edit synced lyrics, in the web app and in the app beta. Administrators always can.",
+    "beta": "Beta",
+    "betaLyrics": "Lyrics editor",
+    "betaLyricsFooter": "Adds Edit lyrics to the player menu. Still in testing: check the result in the player after saving."
   },
   "errors": {
     "offlineTitle": "Offline mode",
@@ -310,5 +317,54 @@
     "openSideStore": "Open SideStore",
     "noSideStore": "SideStore is not installed on this iPhone.",
     "noShortcuts": "The Shortcuts app could not be opened."
+  },
+  "playlistPicker": {
+    "title": "Add to playlist",
+    "new": "New playlist",
+    "nameHint": "Name of the new playlist",
+    "create": "Create",
+    "added": "Added to {{name}}",
+    "queued": "Goes in {{name}} when the download finishes",
+    "created": "Playlist {{name}} created",
+    "empty": "You have no playlists yet.",
+    "failed": "The playlist could not be changed.",
+    "notInLibraryYet": "The song is not in the library yet. Try again in a minute."
+  },
+  "requests": {
+    "title": "Request history",
+    "empty": "You have not requested any songs yet."
+  },
+  "offlineQueue": {
+    "title": "Downloading",
+    "running_one": "{{count}} in progress",
+    "running_other": "{{count}} in progress",
+    "queued": "Waiting",
+    "error": "Failed",
+    "failed_one": "{{count}} download failed",
+    "failed_other": "{{count}} downloads failed",
+    "retry": "Retry",
+    "clear": "Clear"
+  },
+  "lyricsEditor": {
+    "menu": "Edit lyrics",
+    "title": "Edit lyrics",
+    "save": "Save",
+    "saved": "Lyrics saved",
+    "saveFailed": "The lyrics could not be saved.",
+    "loadFailed": "The lyrics could not be opened.",
+    "notAllowed": "Your account cannot edit lyrics.",
+    "hint": "Play the song and tap the clock as each line starts: the next line is selected for you.",
+    "otherSong": "Another song is playing: play this song to use the timing buttons.",
+    "wholeSong": "Whole song",
+    "setNow": "Set to the current moment",
+    "instrumental": "Instrumental",
+    "empty": "This song has no lyrics to edit.",
+    "untimedTitle": "Lines without time",
+    "untimedBody_one": "{{count}} line has no time yet. Give every line a time before saving.",
+    "untimedBody_other": "{{count}} lines have no time yet. Give every line a time before saving.",
+    "discardTitle": "Discard changes?",
+    "discardBody": "Your changes to these lyrics have not been saved.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing"
   }
 }

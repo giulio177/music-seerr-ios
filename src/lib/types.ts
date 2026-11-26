@@ -3,6 +3,8 @@ export type User = {
   name: string;
   is_admin?: boolean;
   is_guest?: boolean;
+  /** Administrators, or every Jellyfin account when the administrator allows it. */
+  can_edit_lyrics?: boolean;
 };
 
 /** A track of the Jellyfin library, as returned by the backend's `_format_track_item`. */
@@ -27,7 +29,7 @@ export type LibraryTrack = {
 
 export type Album = { id: string; name: string; artist: string; artist_id?: string | null; year?: number | null; cover_url: string };
 export type Artist = { id: string; name: string; cover_url: string };
-export type Playlist = { id: string; name: string; track_count?: number; cover_url?: string | null };
+export type Playlist = { id: string; name: string; track_count?: number; cover_url?: string | null; owner_user_id?: string | null };
 
 /** A catalog (Deezer / iTunes) search result. */
 export type CatalogTrack = {

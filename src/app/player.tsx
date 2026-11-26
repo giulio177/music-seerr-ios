@@ -20,6 +20,8 @@ import { SwipeArea } from '@/components/SwipeArea';
 import { trackMenuItems } from '@/components/TrackRow';
 import { Symbol } from '@/components/Symbol';
 import { Backdrop } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
+import { useBeta } from '@/lib/beta';
 import { formatTime } from '@/lib/format';
 import { parseLrc, useLyrics, type LyricLine } from '@/lib/lyrics';
 import { useOffline } from '@/lib/offline';
@@ -153,8 +155,19 @@ function MoreButton({ item }: { item: QueueItem }) {
   const { t } = useTranslation();
   // Rebuilt on open by the native menu; the download state is read when the item renders.
   const saved = useOffline((s) => !!s.tracks[item.id]);
+  const lyricsEditor = useBeta((s) => s.lyricsEditor);
+  const canEditLyrics = useAuth((s) => s.status === 'signedIn' && !s.unreachable && !!s.user?.can_edit_lyrics);
   if (item.kind !== 'library' || !item.library) return null;
   const items = trackMenuItems(item.library, t, { queue: false, navigate: goTo, playlistId: item.playlistId });
+  if (lyricsEditor && canEditLyrics && /^[0-9a-f]{32}$/.test(item.id)) {
+    items.push({
+      id: 'editLyrics',
+      title: t('lyricsEditor.menu'),
+      systemImage: 'quote.bubble',
+      group: 3,
+      run: () => router.push({ pathname: '/lyrics-editor', params: { id: item.id, title: item.title } }),
+    });
+  }
   return (
     <Menu key={String(saved)} items={items} cancelLabel={t('common.cancel')} title={item.title} accessibilityLabel={t('common.more')} style={styles.more}>
       <Symbol name="ellipsis" fallback="ellipsis-horizontal" size={18} color={colors.text} />

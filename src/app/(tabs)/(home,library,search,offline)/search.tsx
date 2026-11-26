@@ -1,9 +1,10 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
 import { DownloadQueue } from '@/components/DownloadQueue';
+import { NavList } from '@/components/Shelf';
 import { TrackRow } from '@/components/TrackRow';
 import { EmptyState, ErrorState, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -95,8 +96,21 @@ export default function Search() {
             loading ? (
               <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} />
             ) : !results && !isGuest ? (
-              // Before a search: this account's download requests and their progress.
-              <DownloadQueue />
+              // Before a search: this account's download requests and their progress, and the full history.
+              <>
+                <NavList
+                  items={[
+                    {
+                      key: 'requests',
+                      title: t('requests.title'),
+                      symbol: 'clock.arrow.circlepath',
+                      fallback: 'time-outline',
+                      onPress: () => router.push('/requests'),
+                    },
+                  ]}
+                />
+                <DownloadQueue />
+              </>
             ) : undefined
           }
           ListEmptyComponent={

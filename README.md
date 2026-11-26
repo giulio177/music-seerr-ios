@@ -22,16 +22,18 @@ iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-host
 - **Sign in** with your Jellyfin account (or as a guest) on your Sonalis server.
 - **Home feed** with recently played tracks, playlists, and Picked for you recommendations.
 - **Library browsing** for playlists, artists, albums, songs, and Recently Added albums.
-- **Search and request**: preview 30-second catalog clips, request missing songs or albums, and monitor the live server download queue (cancel, retry, or dismiss jobs).
-- **Playlist editing**: add tracks to playlists and remove songs from playlists you own.
+- **Search and request**: preview 30-second catalog clips, request missing songs or albums, monitor the live server download queue (cancel, retry, dismiss, or add a request to a playlist), and browse your request history.
+- **Playlist editing**: create playlists, add songs from any song menu, and remove songs from playlists you own.
 
 ### Listen and offline
 
 - **Offline downloads**: save songs, albums, and playlists to your iPhone and play them without a connection; downloaded tracks always play from disk even when online.
+- **Download progress**: the Downloads tab lists songs still downloading to the iPhone, with retry for failed ones.
 - **Files app access**: downloads are stored as `<Artist>/<Album>/<NN> <Title>` in the app's Documents folder, visible in the iOS Files app.
 - **Offline-first launch**: opens directly into your library, falls back to downloaded songs when the server is unreachable, and supports a downloads-only mode without signing in.
 - **Full playback controls**: background audio, lock screen and Control Center controls, editable queue, shuffle, repeat (all or one), and crossfade (1 to 12 seconds).
 - **Synced lyrics**: follow along with instrumental break indicators; lyrics are saved offline with every download.
+- **Lyrics editor (beta)**: retime synced lyrics from the player, line by line or for the whole song; turn it on in Settings > Beta (needs lyrics permission on the server).
 - **Mini player gestures**: swipe left or right on the mini player to skip tracks.
 
 ### Synced with the web app

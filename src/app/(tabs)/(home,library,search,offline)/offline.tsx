@@ -2,6 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { OfflineQueue } from '@/components/OfflineQueue';
 import { NavList, Shelf, TileGrid, type NavItem } from '@/components/Shelf';
 import { TabHeader, TopFade } from '@/components/TabHeader';
 import { AccentButton, EmptyState } from '@/components/ui';
@@ -18,6 +19,7 @@ export default function Offline() {
   const { t } = useTranslation();
   const saved = useOffline((s) => s.tracks);
   const downloadsOnly = useAuth((s) => s.status === 'offline');
+  const downloading = useOffline((s) => Object.keys(s.active).length > 0);
 
   const all = useMemo(() => Object.values(saved), [saved]);
   const hasPlaylists = usePlaylists((s) => s.playlists.some((p) => p.track_ids.some((id) => saved[id])));
@@ -71,6 +73,7 @@ export default function Offline() {
             <AccentButton label={t('offline.signIn')} variant="glass" onPress={() => useAuth.getState().leaveDownloadsOnly()} />
           </View>
         ) : null}
+        <OfflineQueue />
         {all.length ? (
           <>
             <NavList items={items} />
@@ -97,7 +100,7 @@ export default function Offline() {
             </Shelf>
           </>
         ) : (
-          <EmptyState icon="arrow-down-circle-outline" body={t('offline.empty')} />
+          downloading ? null : <EmptyState icon="arrow-down-circle-outline" body={t('offline.empty')} />
         )}
       </ScrollView>
       <TopFade />

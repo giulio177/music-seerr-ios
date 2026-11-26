@@ -887,6 +887,13 @@ usePlayer.subscribe((state, prev) => {
   }
 });
 
+/** The playback time right now (the store's `position` updates only twice a second), for the lyrics editor. */
+export function exactPosition() {
+  const { position, remote } = usePlayer.getState();
+  if (remote || !playlist) return position;
+  return playlist.currentTime;
+}
+
 export function useCurrentItem() {
   return usePlayer((s) => s.queue[s.index]);
 }

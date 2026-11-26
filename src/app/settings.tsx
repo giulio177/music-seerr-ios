@@ -11,6 +11,7 @@ import { toast } from '@/components/Toast';
 import { AccentButton, Backdrop, Glass } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useBeta } from '@/lib/beta';
 import { formatBytes } from '@/lib/format';
 import { savedLanguage, setLanguage, type LanguageChoice } from '@/lib/language';
 import { useOffline } from '@/lib/offline';
@@ -28,6 +29,7 @@ type ServerSettings = {
   jellyfin_api_key: string;
   jellyfin_user_id: string;
   language: string;
+  lyrics_edit_users?: boolean;
   jellyfin_music_paths?: string[];
 };
 
@@ -67,6 +69,7 @@ export default function Settings() {
           <DownloadsSection />
           <SigningSection />
           <UpdatesSection />
+          <BetaSection />
 
           <AccentButton
             label={t('settings.signOut')}
@@ -451,8 +454,48 @@ function AdminSections() {
         <AccentButton label={t('settings.test')} variant="glass" onPress={test} loading={busy === 'test'} style={{ flex: 1 }} />
         <AccentButton label={t('settings.save')} onPress={save} loading={busy === 'save'} disabled={!changed} style={{ flex: 1 }} />
       </View>
+      <PermissionsSection value={!!settings.data.lyrics_edit_users} onSaved={settings.refresh} />
       <AliasSection />
     </>
+  );
+}
+
+function PermissionsSection({ value, onSaved }: { value: boolean; onSaved: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const { accent } = useAccent();
+  const [pending, setPending] = useState<boolean | null>(null);
+  const set = async (on: boolean) => {
+    setPending(on);
+    try {
+      await api('/api/settings', { method: 'POST', body: { lyrics_edit_users: on } });
+      await onSaved();
+    } catch (e) {
+      Alert.alert(t('settings.permissions'), errorText(e, t));
+    } finally {
+      setPending(null);
+    }
+  };
+  return (
+    <Section title={t('settings.permissions')} footer={t('settings.lyricsUsersFooter')}>
+      <Row label={t('settings.lyricsUsers')} last>
+        <Switch value={pending ?? value} trackColor={{ true: accent }} onValueChange={set} />
+      </Row>
+    </Section>
+  );
+}
+
+function BetaSection() {
+  const { t } = useTranslation();
+  const { accent } = useAccent();
+  const canEdit = useAuth((s) => !!s.user?.can_edit_lyrics);
+  const lyricsEditor = useBeta((s) => s.lyricsEditor);
+  if (!canEdit) return null;
+  return (
+    <Section title={t('settings.beta')} footer={t('settings.betaLyricsFooter')}>
+      <Row label={t('settings.betaLyrics')} last>
+        <Switch value={lyricsEditor} trackColor={{ true: accent }} onValueChange={(on) => useBeta.getState().setLyricsEditor(on)} />
+      </Row>
+    </Section>
   );
 }
 

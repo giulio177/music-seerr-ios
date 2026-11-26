@@ -88,7 +88,8 @@
     "removedFromPlaylist": "Rimosso dalla playlist",
     "removeFromPlaylistFailed": "Impossibile rimuovere il brano dalla playlist",
     "playlistNotYours": "Puoi modificare solo le tue playlist",
-    "playlistOffline": "Il server non è raggiungibile"
+    "playlistOffline": "Il server non è raggiungibile",
+    "addToPlaylist": "Aggiungi a playlist"
   },
   "search": {
     "placeholder": "Brani, artisti, album",
@@ -211,7 +212,13 @@
     "signingDays_other": "Tra {{count}} giorni",
     "signingToday": "Oggi",
     "signingExpired": "Scaduta",
-    "signingFooter": "Le app firmate con un Apple ID gratuito smettono di aprirsi dopo 7 giorni. Prima di allora reinstalla l'app con Impactor o aggiornala in SideStore: login e download restano."
+    "signingFooter": "Le app firmate con un Apple ID gratuito smettono di aprirsi dopo 7 giorni. Prima di allora reinstalla l'app con Impactor o aggiornala in SideStore: login e download restano.",
+    "permissions": "Permessi",
+    "lyricsUsers": "Gli utenti possono modificare le lyrics",
+    "lyricsUsersFooter": "Permette a ogni account Jellyfin di modificare le lyrics sincronizzate, nella web app e nella beta dell'app. Gli amministratori possono sempre.",
+    "beta": "Beta",
+    "betaLyrics": "Editor delle lyrics",
+    "betaLyricsFooter": "Aggiunge Modifica lyrics al menu del player. Ancora in prova: controlla il risultato nel player dopo aver salvato."
   },
   "errors": {
     "offlineTitle": "Modalità offline",
@@ -310,5 +317,54 @@
     "openSideStore": "Apri SideStore",
     "noSideStore": "SideStore non è installato su questo iPhone.",
     "noShortcuts": "Non è stato possibile aprire l'app Comandi Rapidi."
+  },
+  "playlistPicker": {
+    "title": "Aggiungi a playlist",
+    "new": "Nuova playlist",
+    "nameHint": "Nome della nuova playlist",
+    "create": "Crea",
+    "added": "Aggiunto a {{name}}",
+    "queued": "Finirà in {{name}} quando il download è completato",
+    "created": "Playlist {{name}} creata",
+    "empty": "Non hai ancora playlist.",
+    "failed": "Non è stato possibile modificare la playlist.",
+    "notInLibraryYet": "Il brano non è ancora nella libreria. Riprova tra un minuto."
+  },
+  "requests": {
+    "title": "Cronologia richieste",
+    "empty": "Non hai ancora richiesto brani."
+  },
+  "offlineQueue": {
+    "title": "In download",
+    "running_one": "{{count}} in corso",
+    "running_other": "{{count}} in corso",
+    "queued": "In attesa",
+    "error": "Non riuscito",
+    "failed_one": "{{count}} download non riuscito",
+    "failed_other": "{{count}} download non riusciti",
+    "retry": "Riprova",
+    "clear": "Rimuovi"
+  },
+  "lyricsEditor": {
+    "menu": "Modifica lyrics",
+    "title": "Modifica lyrics",
+    "save": "Salva",
+    "saved": "Lyrics salvate",
+    "saveFailed": "Non è stato possibile salvare le lyrics.",
+    "loadFailed": "Non è stato possibile aprire le lyrics.",
+    "notAllowed": "Il tuo account non può modificare le lyrics.",
+    "hint": "Fai partire il brano e tocca l'orologio quando inizia ogni riga: la riga successiva viene selezionata da sola.",
+    "otherSong": "Sta suonando un altro brano: fai partire questo per usare i pulsanti di tempo.",
+    "wholeSong": "Tutto il brano",
+    "setNow": "Imposta all'istante attuale",
+    "instrumental": "Strumentale",
+    "empty": "Questo brano non ha lyrics da modificare.",
+    "untimedTitle": "Righe senza tempo",
+    "untimedBody_one": "{{count}} riga non ha ancora un tempo. Dai un tempo a ogni riga prima di salvare.",
+    "untimedBody_other": "{{count}} righe non hanno ancora un tempo. Dai un tempo a ogni riga prima di salvare.",
+    "discardTitle": "Annullare le modifiche?",
+    "discardBody": "Le modifiche a queste lyrics non sono state salvate.",
+    "discard": "Annulla modifiche",
+    "keepEditing": "Continua a modificare"
   }
 }
