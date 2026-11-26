@@ -13,6 +13,7 @@ import { startConnect } from '@/lib/connect';
 import { useOffline } from '@/lib/offline';
 import { usePlayer } from '@/lib/player';
 import { startShortcuts } from '@/lib/shortcuts';
+import { onAppActive } from '@/lib/updates';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -23,6 +24,24 @@ const theme: Theme = {
   ...DarkTheme,
   colors: { ...DarkTheme.colors, background: 'transparent', card: colors.bg },
 };
+
+/** Loads the saved session, then brings back the last song and shares playback. */
+function loadSession() {
+  useAuth
+    .getState()
+    .load()
+    .catch((error) => {
+      console.error('[startup] session', error);
+      useAuth.setState({ status: 'signedOut' });
+    })
+    // After the session (stream URLs need the server and token): bring back the last song, paused.
+    .then(() => {
+      if (useAuth.getState().status === 'signedIn') usePlayer.getState().restore();
+      // Then share playback with the account's other devices (web app, other iPhones).
+      if (useAuth.getState().status !== 'locked') startConnect();
+    })
+    .catch((error) => console.error('[startup] player', error));
+}
 
 export default function RootLayout() {
   const status = useAuth((s) => s.status);
@@ -40,27 +59,15 @@ export default function RootLayout() {
     } catch (error) {
       console.error('[startup] offline library', error);
     }
-    useAuth
-      .getState()
-      .load()
-      .catch((error) => {
-        console.error('[startup] session', error);
-        useAuth.setState({ status: 'signedOut' });
-      })
-      // After the session (stream URLs need the server and token): bring back the last song, paused.
-      .then(() => {
-        if (useAuth.getState().status === 'signedIn') usePlayer.getState().restore();
-        // Then share playback with the account's other devices (web app, other iPhones).
-        startConnect();
-      })
-      .catch((error) => console.error('[startup] player', error));
+    loadSession();
+    onAppActive().catch(() => undefined);
     // Never leave the splash screen up, whatever happens during startup.
     const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), 5000);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (status !== 'loading') SplashScreen.hideAsync().catch(() => undefined);
+    if (status !== 'loading' && status !== 'locked') SplashScreen.hideAsync().catch(() => undefined);
   }, [status]);
 
   // Back in the foreground: check the server again (for example back home on Wi-Fi) and pick up songs deleted in the Files app.
@@ -68,12 +75,15 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
       useOffline.getState().refresh();
+      onAppActive().catch(() => undefined);
+      // Started while the iPhone was locked after a reboot: the keychain is readable now.
+      if (useAuth.getState().status === 'locked') loadSession();
       if (useAuth.getState().status === 'signedIn') useAuth.getState().verify();
     });
     return () => sub.remove();
   }, []);
 
-  if (status === 'loading') return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (status === 'loading' || status === 'locked') return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   return (
     <ThemeProvider value={theme}>

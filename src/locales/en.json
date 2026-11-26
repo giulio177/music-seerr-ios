@@ -234,6 +234,7 @@
   },
   "shortcuts": {
     "signIn": "Sign in to Sonalis first.",
+    "locked": "Unlock your iPhone once, then try again.",
     "offline": "The Sonalis server cannot be reached.",
     "needsAccount": "Sign in with your Jellyfin account to request songs.",
     "unknown": "This action needs a newer version of Sonalis.",
@@ -291,5 +292,23 @@
     "withDownloaded_other": "{{name}}, {{count}} downloaded",
     "downloadedCount_one": "{{count}} downloaded song",
     "downloadedCount_other": "{{count}} downloaded songs"
+  },
+  "updates": {
+    "section": "Updates",
+    "title": "Update Sonalis",
+    "installed": "Installed version",
+    "available": "Sonalis {{version}} is available. Update now? Your sign-in and downloads stay.",
+    "update": "Update",
+    "later": "Later",
+    "updateTo": "Update to {{version}}",
+    "check": "Check for updates",
+    "checking": "Checking...",
+    "upToDate": "Up to date",
+    "useShortcuts": "Switch VPN with shortcuts",
+    "footer": "Updates install through SideStore, which needs LocalDevVPN. With the switch on, Update runs the shortcut \"{{update}}\" (connect LocalDevVPN, then open the Shortcut Input as a URL), and the next time you open Sonalis it runs \"{{vpn}}\" (connect your usual VPN, such as Tailscale).",
+    "vpnHint": "Turn on LocalDevVPN, then install the update in SideStore.",
+    "openSideStore": "Open SideStore",
+    "noSideStore": "SideStore is not installed on this iPhone.",
+    "noShortcuts": "The Shortcuts app could not be opened."
   }
 }

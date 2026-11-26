@@ -1,6 +1,6 @@
 import { getLocales } from 'expo-localization';
-import * as SecureStore from 'expo-secure-store';
 import i18n, { resources } from './i18n';
+import { readKey, writeKey } from './keychain';
 
 export type LanguageChoice = 'system' | keyof typeof resources;
 const KEY = 'language';
@@ -12,7 +12,7 @@ function deviceLanguage() {
 
 /** The saved choice (`system` follows the iPhone language). */
 export async function savedLanguage(): Promise<LanguageChoice> {
-  const value = await SecureStore.getItemAsync(KEY).catch(() => null);
+  const value = await readKey(KEY).catch(() => null);
   return value && value in resources ? (value as LanguageChoice) : 'system';
 }
 
@@ -24,6 +24,6 @@ export async function applySavedLanguage() {
 
 /** Changes the app language and remembers it on this iPhone. */
 export async function setLanguage(choice: LanguageChoice) {
-  await SecureStore.setItemAsync(KEY, choice).catch(() => undefined);
+  await writeKey(KEY, choice).catch(() => undefined);
   await i18n.changeLanguage(choice === 'system' ? deviceLanguage() : choice);
 }

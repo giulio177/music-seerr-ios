@@ -47,6 +47,7 @@ function sessionLoaded() {
 
 function requireAccount() {
   const { status, user } = useAuth.getState();
+  if (status === 'locked') throw fail('locked');
   if (status === 'signedOut') throw fail('signIn');
   return { online: status === 'signedIn', guest: !!user?.is_guest };
 }
@@ -502,6 +503,8 @@ function scheduleCatalog() {
   if (writeTimer) clearTimeout(writeTimer);
   writeTimer = setTimeout(() => {
     writeTimer = null;
+    // The session is not known yet: keep the saved catalog instead of emptying it.
+    if (useAuth.getState().status === 'locked') return;
     catalog = buildCatalog();
     const json = JSON.stringify(catalog);
     if (json === written) return;

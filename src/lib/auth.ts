@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { api, ApiError, bindSession, serverCandidates } from './api';
+import { deleteKey, readKey, writeKey } from './keychain';
 import { backfillCovers } from './offline';
 import { usePlaylists } from './playlists';
 import { usePreferences } from './preferences';
@@ -9,8 +9,11 @@ import type { User } from './types';
 const KEYS = { server: 'server_url', token: 'session_token', user: 'session_user' };
 
 type AuthState = {
-  /** `offline`: no session, the app shows the downloaded songs only. */
-  status: 'loading' | 'signedOut' | 'signedIn' | 'offline';
+  /**
+   * `offline`: no session, the app shows the downloaded songs only. `locked`: the keychain cannot be read yet
+   * (iPhone not unlocked since boot); `load` runs again when the app comes to the foreground.
+   */
+  status: 'loading' | 'locked' | 'signedOut' | 'signedIn' | 'offline';
   serverUrl: string;
   token: string | null;
   user: User | null;
@@ -39,9 +42,9 @@ type LoginResponse = { success: boolean; user: User; session_token?: string };
 /** Saves the session in the keychain; a keychain failure keeps the session for this launch only. */
 async function persist(server: string, token: string, user: User) {
   try {
-    await SecureStore.setItemAsync(KEYS.server, server);
-    await SecureStore.setItemAsync(KEYS.token, token);
-    await SecureStore.setItemAsync(KEYS.user, JSON.stringify(user));
+    await writeKey(KEYS.server, server);
+    await writeKey(KEYS.token, token);
+    await writeKey(KEYS.user, JSON.stringify(user));
   } catch (error) {
     console.warn('[auth] could not save the session to the keychain', error);
   }
@@ -76,8 +79,15 @@ export const useAuth = create<AuthState>((set, get) => ({
   unreachable: false,
 
   load: async () => {
-    const read = (key: string) => SecureStore.getItemAsync(key).catch(() => null);
-    const [serverUrl, token, userJson] = await Promise.all([read(KEYS.server), read(KEYS.token), read(KEYS.user)]);
+    let serverUrl: string | null, token: string | null, userJson: string | null;
+    try {
+      [serverUrl, token, userJson] = await Promise.all([readKey(KEYS.server), readKey(KEYS.token), readKey(KEYS.user)]);
+    } catch (error) {
+      // A refused read is not a missing session: never show the sign-in screen for it.
+      console.warn('[auth] keychain not readable yet', error);
+      set({ status: 'locked' });
+      return;
+    }
     if (!serverUrl || !token) {
       set({ status: 'signedOut', serverUrl: serverUrl ?? '' });
       return;
@@ -91,6 +101,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Open the app at once with the saved session (downloads work without the server),
     // then confirm it in the background.
     set({ status: 'signedIn', serverUrl, token, user });
+    // Sessions saved by older builds are readable only while unlocked: save them again with the new accessibility.
+    writeKey(KEYS.server, serverUrl).catch(() => undefined);
+    writeKey(KEYS.token, token).catch(() => undefined);
+    if (userJson) writeKey(KEYS.user, userJson).catch(() => undefined);
     if (user && !user.is_guest) usePreferences.getState().restore(user.id ?? user.name);
     get().verify();
   },
@@ -103,7 +117,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         return;
       }
       set({ user: session.user, unreachable: false });
-      await SecureStore.setItemAsync(KEYS.user, JSON.stringify(session.user)).catch(() => undefined);
+      await writeKey(KEYS.user, JSON.stringify(session.user)).catch(() => undefined);
       if (!session.user.is_guest) {
         loadPreferences(session.user);
         backfillCovers();
@@ -163,8 +177,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   expire: () => {
-    SecureStore.deleteItemAsync(KEYS.token).catch(() => undefined);
-    SecureStore.deleteItemAsync(KEYS.user).catch(() => undefined);
+    deleteKey(KEYS.token).catch(() => undefined);
+    deleteKey(KEYS.user).catch(() => undefined);
     usePreferences.getState().clear();
     set({ status: 'signedOut', token: null, user: null, unreachable: false });
   },

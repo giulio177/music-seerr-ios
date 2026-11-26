@@ -1,7 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { useAuth } from './auth';
+import { readKey, writeKey } from './keychain';
 import { usePreferences } from './preferences';
 import { usePlayer, setRemoteSender, type PlaybackSnapshot, type QueueItem, type RemoteAction, type RepeatMode } from './player';
 import type { LibraryTrack } from './types';
@@ -59,10 +59,10 @@ let receivedAt = 0;
 
 async function loadDeviceId() {
   if (deviceId) return deviceId;
-  let id = await SecureStore.getItemAsync(DEVICE_KEY).catch(() => null);
+  let id = await readKey(DEVICE_KEY).catch(() => null);
   if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
     id = `ios-${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`;
-    await SecureStore.setItemAsync(DEVICE_KEY, id).catch(() => undefined);
+    await writeKey(DEVICE_KEY, id).catch(() => undefined);
   }
   deviceId = id;
   useConnect.setState({ deviceId: id });

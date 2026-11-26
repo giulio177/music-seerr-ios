@@ -18,6 +18,7 @@ import { usePlayer } from '@/lib/player';
 import { usePreferences, type PreferenceChange } from '@/lib/preferences';
 import { daysLeft, signatureExpiry } from '@/lib/signing';
 import { ACCENT_PRESETS, colors, resolveAccent, useAccent } from '@/lib/theme';
+import { availableUpdate, checkForUpdate, startUpdate, UPDATE_SHORTCUT, useUpdates, VPN_SHORTCUT } from '@/lib/updates';
 import { useApi } from '@/lib/useApi';
 
 type ServerSettings = {
@@ -65,6 +66,7 @@ export default function Settings() {
           {user?.is_admin && !unreachable ? <AdminSections /> : null}
           <DownloadsSection />
           <SigningSection />
+          <UpdatesSection />
 
           <AccentButton
             label={t('settings.signOut')}
@@ -518,6 +520,29 @@ function SigningSection() {
     <Section title={t('settings.signing')} footer={t('settings.signingFooter')}>
       <Row label={t('settings.signingExpires')} value={value} danger={days < 2} />
       <Row label={t('settings.signingDate')} value={date} last />
+    </Section>
+  );
+}
+
+function UpdatesSection() {
+  const { t } = useTranslation();
+  const { accent: accentColor } = useAccent();
+  const { current, latest, checking, useShortcuts, setUseShortcuts } = useUpdates();
+  useEffect(() => {
+    checkForUpdate().catch(() => undefined);
+  }, []);
+  const update = latest ? availableUpdate() : null;
+  return (
+    <Section title={t('updates.section')} footer={t('updates.footer', { update: UPDATE_SHORTCUT, vpn: VPN_SHORTCUT })}>
+      <Row label={t('updates.installed')} value={current} />
+      {update ? (
+        <Row label={t('updates.updateTo', { version: update.version })} onPress={() => startUpdate(update)} />
+      ) : (
+        <Row label={checking ? t('updates.checking') : t('updates.check')} value={latest ? t('updates.upToDate') : undefined} onPress={checking ? undefined : () => checkForUpdate(true)} />
+      )}
+      <Row label={t('updates.useShortcuts')} last>
+        <Switch value={useShortcuts} trackColor={{ true: accentColor }} onValueChange={setUseShortcuts} />
+      </Row>
     </Section>
   );
 }

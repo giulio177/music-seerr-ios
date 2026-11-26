@@ -234,6 +234,7 @@
   },
   "shortcuts": {
     "signIn": "Prima accedi a Sonalis.",
+    "locked": "Sblocca l'iPhone una volta, poi riprova.",
     "offline": "Il server di Sonalis non è raggiungibile.",
     "needsAccount": "Accedi con il tuo account Jellyfin per richiedere brani.",
     "unknown": "Questa azione richiede una versione più recente di Sonalis.",
@@ -291,5 +292,23 @@
     "withDownloaded_other": "{{name}}, {{count}} scaricati",
     "downloadedCount_one": "{{count}} brano scaricato",
     "downloadedCount_other": "{{count}} brani scaricati"
+  },
+  "updates": {
+    "section": "Aggiornamenti",
+    "title": "Aggiorna Sonalis",
+    "installed": "Versione installata",
+    "available": "È disponibile Sonalis {{version}}. Aggiornare ora? Accesso e download restano.",
+    "update": "Aggiorna",
+    "later": "Più tardi",
+    "updateTo": "Aggiorna a {{version}}",
+    "check": "Cerca aggiornamenti",
+    "checking": "Ricerca in corso...",
+    "upToDate": "Aggiornata",
+    "useShortcuts": "Cambia VPN con i comandi rapidi",
+    "footer": "Gli aggiornamenti si installano con SideStore, che richiede LocalDevVPN. Con l'interruttore attivo, Aggiorna esegue il comando rapido \"{{update}}\" (connette LocalDevVPN, poi apre l'input come URL), e alla successiva apertura di Sonalis esegue \"{{vpn}}\" (connette la VPN abituale, ad esempio Tailscale).",
+    "vpnHint": "Attiva LocalDevVPN, poi installa l'aggiornamento in SideStore.",
+    "openSideStore": "Apri SideStore",
+    "noSideStore": "SideStore non è installato su questo iPhone.",
+    "noShortcuts": "Non è stato possibile aprire l'app Comandi Rapidi."
   }
 }
