@@ -112,7 +112,9 @@
       "interrupted": "Interrupted",
       "cancelled": "Cancelled"
     },
-    "requestFailed": "The request failed."
+    "requestFailed": "The request failed.",
+    "notFoundInLibrary": "This song is not in the library yet.",
+    "openFailed": "Could not open the song."
   },
   "offline": {
     "title": "Downloads",
@@ -218,7 +220,10 @@
     "lyricsUsersFooter": "Lets every Jellyfin account edit synced lyrics, in the web app and in the app beta. Administrators always can.",
     "beta": "Beta",
     "betaLyrics": "Lyrics editor",
-    "betaLyricsFooter": "Adds Edit lyrics to the player menu. Still in testing: check the result in the player after saving."
+    "betaLyricsFooter": "Adds Edit lyrics to the player menu. Still in testing: check the result in the player after saving.",
+    "playback": "Playback",
+    "normalize": "Stabilize volume",
+    "normalizeFooter": "Plays every song at a similar loudness, measured by Jellyfin, so you do not have to change the volume between songs. Loud songs are turned down to match quieter ones, so raise the iPhone volume once after turning this on. Applies to this iPhone."
   },
   "errors": {
     "offlineTitle": "Offline mode",
@@ -328,7 +333,12 @@
     "created": "Playlist {{name}} created",
     "empty": "You have no playlists yet.",
     "failed": "The playlist could not be changed.",
-    "notInLibraryYet": "The song is not in the library yet. Try again in a minute."
+    "notInLibraryYet": "The song is not in the library yet. Try again in a minute.",
+    "alreadyIn": "Already added",
+    "alreadyTitle": "Already in playlist",
+    "alreadyBody_one": "This song is already in {{name}}. Add it again?",
+    "alreadyBody_other": "These songs are already in {{name}}. Add them again?",
+    "addAgain": "Add again"
   },
   "requests": {
     "title": "Request history",

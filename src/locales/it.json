@@ -112,7 +112,9 @@
       "interrupted": "Interrotto",
       "cancelled": "Annullato"
     },
-    "requestFailed": "La richiesta non è riuscita."
+    "requestFailed": "La richiesta non è riuscita.",
+    "notFoundInLibrary": "Questo brano non è ancora in libreria.",
+    "openFailed": "Impossibile aprire il brano."
   },
   "offline": {
     "title": "Scaricati",
@@ -218,7 +220,10 @@
     "lyricsUsersFooter": "Permette a ogni account Jellyfin di modificare le lyrics sincronizzate, nella web app e nella beta dell'app. Gli amministratori possono sempre.",
     "beta": "Beta",
     "betaLyrics": "Editor delle lyrics",
-    "betaLyricsFooter": "Aggiunge Modifica lyrics al menu del player. Ancora in prova: controlla il risultato nel player dopo aver salvato."
+    "betaLyricsFooter": "Aggiunge Modifica lyrics al menu del player. Ancora in prova: controlla il risultato nel player dopo aver salvato.",
+    "playback": "Riproduzione",
+    "normalize": "Stabilizza volume",
+    "normalizeFooter": "Riproduce ogni brano a un volume simile, misurato da Jellyfin, così non devi regolare il volume tra un brano e l'altro. I brani più forti vengono abbassati al livello di quelli più bassi: dopo averlo attivato alza una volta il volume dell'iPhone. Vale per questo iPhone."
   },
   "errors": {
     "offlineTitle": "Modalità offline",
@@ -328,7 +333,12 @@
     "created": "Playlist {{name}} creata",
     "empty": "Non hai ancora playlist.",
     "failed": "Non è stato possibile modificare la playlist.",
-    "notInLibraryYet": "Il brano non è ancora nella libreria. Riprova tra un minuto."
+    "notInLibraryYet": "Il brano non è ancora nella libreria. Riprova tra un minuto.",
+    "alreadyIn": "Già presente",
+    "alreadyTitle": "Già nella playlist",
+    "alreadyBody_one": "Questo brano è già in {{name}}. Aggiungerlo di nuovo?",
+    "alreadyBody_other": "Questi brani sono già in {{name}}. Aggiungerli di nuovo?",
+    "addAgain": "Aggiungi di nuovo"
   },
   "requests": {
     "title": "Cronologia richieste",

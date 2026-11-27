@@ -2,6 +2,7 @@ import { createAudioPlayer, createAudioPlaylist, setAudioModeAsync, type AudioPl
 import { Directory, File, Paths } from 'expo-file-system';
 import { create } from 'zustand';
 import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
+import { rememberGain, useLoudness, volumeFor } from './loudness';
 import { localAudioUri, localCoverUri, saveArtwork, streamPath, supportDir, useOffline } from './offline';
 import { usePreferences } from './preferences';
 import type { CatalogTrack, LibraryTrack } from './types';
@@ -87,6 +88,7 @@ function nextKey() {
 
 function fromLibrary(track: LibraryTrack, order: number, playlistId?: string | null): QueueItem {
   const offline = useOffline.getState().tracks[track.id];
+  rememberGain(track);
   return {
     key: nextKey(),
     id: track.id,
@@ -114,6 +116,22 @@ function sourceFor(item: QueueItem): AudioSource {
   return { uri: absoluteUrl(streamPath(item.library!)), headers: authHeaders(), name: item.title };
 }
 
+/** Player volume of a queue entry: the volume stabilizer's level for library songs, full for previews. */
+function itemVolume(item: QueueItem | undefined) {
+  return item?.kind === 'library' ? volumeFor(item.id, item.library?.normalization_gain) : 1;
+}
+
+/** Sets the queue player to the current song's level (not during a crossfade, which ramps it itself). */
+function applyVolume() {
+  if (!playlist || crossfade.state !== 'idle') return;
+  const volume = itemVolume(usePlayer.getState().queue[playlist.currentIndex]);
+  if (Math.abs(playlist.volume - volume) > 0.001) playlist.volume = volume;
+}
+
+useLoudness.subscribe((state, previous) => {
+  if (state.enabled !== previous.enabled) applyVolume();
+});
+
 let audioModeReady: Promise<void> | null = null;
 function ensureAudioMode() {
   audioModeReady ??= setAudioModeAsync({
@@ -130,6 +148,7 @@ function getPlaylist() {
     playlist.addListener('playlistStatusUpdate', (status) => {
       tracker.tick(status.currentTime, status.playing);
       crossfade.check(status.currentTime, status.duration, status.playing, status.isBuffering, status.currentIndex);
+      applyVolume();
       usePlayer.setState({
         playing: status.playing,
         buffering: status.isBuffering,
@@ -143,6 +162,7 @@ function getPlaylist() {
       pendingSeek = null;
       restoredIdle = false;
       usePlayer.setState({ index: currentIndex, position: 0 });
+      applyVolume();
       onTrackStart();
     });
   }
@@ -248,16 +268,20 @@ const crossfade = {
     if (!pl || !tail || this.nextIndex() < 0) return this.abort();
     const fade = Math.max(1, Math.min(this.seconds(), pl.duration - pl.currentTime));
     if (this.timer !== null) clearInterval(this.timer);
+    const { queue } = usePlayer.getState();
+    // Each song keeps its own level (volume stabilizer) through the fade.
+    const tailVolume = itemVolume(queue[pl.currentIndex]);
+    const nextVolume = itemVolume(queue[this.nextIndex()]);
     this.state = 'fading';
     this.setRate(1);
-    tail.volume = 1;
+    tail.volume = tailVolume;
     pl.volume = 0;
     pl.next();
     const began = Date.now();
     this.timer = setInterval(() => {
       const progress = Math.min(1, (Date.now() - began) / (fade * 1000));
-      tail.volume = 1 - progress;
-      if (playlist) playlist.volume = progress;
+      tail.volume = (1 - progress) * tailVolume;
+      if (playlist) playlist.volume = progress * nextVolume;
       if (progress >= 1 && this.timer !== null) {
         clearInterval(this.timer);
         this.timer = null;
@@ -266,11 +290,11 @@ const crossfade = {
     this.endTimer = setTimeout(() => this.finish(), fade * 1000 + 300);
   },
 
-  /** The fade-out has finished: the tail is released; the new song is at full volume. */
+  /** The fade-out has finished: the tail is released; the new song is at its own level. */
   finish() {
     if (this.state !== 'fading') return;
     this.release();
-    if (playlist) playlist.volume = 1;
+    applyVolume();
   },
 
   release() {
@@ -291,11 +315,11 @@ const crossfade = {
     this.state = 'idle';
   },
 
-  /** Cancels a crossfade in progress (pause, seek, manual song change) and restores full volume. */
+  /** Cancels a crossfade in progress (pause, seek, manual song change) and restores the song's level. */
   abort() {
     if (this.state === 'idle') return;
     this.release();
-    if (playlist) playlist.volume = 1;
+    applyVolume();
   },
 
   dispose() {

@@ -15,6 +15,7 @@ import { usePlayer } from '@/lib/player';
 import { startShortcuts } from '@/lib/shortcuts';
 import { onAppActive } from '@/lib/updates';
 import { useBeta } from '@/lib/beta';
+import { useLoudness } from '@/lib/loudness';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -63,6 +64,7 @@ export default function RootLayout() {
     loadSession();
     onAppActive().catch(() => undefined);
     useBeta.getState().load();
+    useLoudness.getState().load();
     // Never leave the splash screen up, whatever happens during startup.
     const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), 5000);
     return () => clearTimeout(timer);

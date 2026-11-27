@@ -19,6 +19,8 @@ export type LibraryTrack = {
   index_number?: number | null;
   disc_number?: number | null;
   has_lyrics?: boolean;
+  /** dB that bring the song to -18 LUFS (Jellyfin Audio Normalization); null until measured. */
+  normalization_gain?: number | null;
   /** Entry ID inside a playlist (playlist listings only); removal works on it, not on the song ID. */
   playlist_entry_id?: string | null;
   is_favorite?: boolean;

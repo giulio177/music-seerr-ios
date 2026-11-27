@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
 import { EmptyState, ErrorState, Loading } from '@/components/ui';
+import { openInLibrary } from '@/lib/locate';
 import { colors, useAccent } from '@/lib/theme';
 import type { CatalogTrack } from '@/lib/types';
 import { useApi } from '@/lib/useApi';
@@ -47,7 +49,12 @@ export default function Requests() {
               minute: '2-digit',
             });
             return (
-              <View style={styles.row}>
+              <Pressable
+                // Songs now in the library open in their album.
+                disabled={!done}
+                onPress={() => openInLibrary({ jellyfinId: item.track.jellyfin_id, title: item.track.title, artist: item.track.artist })}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: 'rgba(255,255,255,0.05)' }]}
+              >
                 <Cover path={item.track.cover_url} size={48} />
                 <View style={styles.meta}>
                   <Text numberOfLines={1} style={styles.title}>
@@ -64,7 +71,8 @@ export default function Requests() {
                   </Text>
                   <Text style={styles.date}>{date}</Text>
                 </View>
-              </View>
+                {done ? <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} /> : null}
+              </Pressable>
             );
           }}
         />

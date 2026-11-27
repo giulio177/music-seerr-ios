@@ -10,7 +10,7 @@ import { localCoverUri, useOffline } from '@/lib/offline';
 import { openAddToPlaylist } from '@/lib/playlistPicker';
 import { usePlayer } from '@/lib/player';
 import { usePlaylists } from '@/lib/playlists';
-import { colors, useAccent } from '@/lib/theme';
+import { colors, useAccent, withAlpha } from '@/lib/theme';
 import type { LibraryTrack } from '@/lib/types';
 import { Cover, coverCandidateUrls } from './Cover';
 import { ContextMenu, hasNativeContextMenu, showActionSheet, type MenuItem } from './Menu';
@@ -112,9 +112,11 @@ type Props = {
   showNumber?: boolean;
   /** Set on a playlist page: the menu offers to remove the song from it. */
   playlistId?: string | null;
+  /** Briefly marked: the song was opened from search or the request history. */
+  highlighted?: boolean;
 };
 
-export const TrackRow = memo(function TrackRow({ track, onPress, showNumber, playlistId }: Props) {
+export const TrackRow = memo(function TrackRow({ track, onPress, showNumber, playlistId, highlighted }: Props) {
   const { t } = useTranslation();
   const current = usePlayer((s) => s.queue[s.index]?.id === track.id);
   const offline = useOffline((s) => s.tracks[track.id]);
@@ -138,7 +140,7 @@ export const TrackRow = memo(function TrackRow({ track, onPress, showNumber, pla
         onLongPress={
           hasNativeContextMenu ? undefined : () => showActionSheet(items, t('common.cancel'), track.title, track.artist)
         }
-        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.row, highlighted && { backgroundColor: withAlpha(accent, 0.18) }, pressed && styles.pressed]}
       >
         {showNumber ? (
           <Text style={[styles.number, current && { color: accent }]}>{track.index_number ?? '·'}</Text>

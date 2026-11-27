@@ -203,10 +203,50 @@ function LyricsPanel({ item }: { item: QueueItem }) {
   const listRef = useRef<FlatList>(null);
   let current = -1;
   for (let i = 0; i < lines.length && lines[i].time <= position + 0.3; i++) current = i;
+  const currentRef = useRef(current);
+  /** The user is scrolling the lyrics (or let go less than half a second ago): the list does not follow the song. */
+  const browsing = useRef(false);
+  const resyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** The list has been placed on the current line since these lyrics loaded. */
+  const placed = useRef(false);
+
+  const scrollToCurrent = (animated: boolean) => {
+    const index = currentRef.current;
+    if (index >= 0) listRef.current?.scrollToIndex({ index, viewPosition: 0.35, animated });
+    else listRef.current?.scrollToOffset({ offset: 0, animated });
+  };
 
   useEffect(() => {
-    if (current >= 0) listRef.current?.scrollToIndex({ index: current, viewPosition: 0.35, animated: true });
+    placed.current = false;
+  }, [lines]);
+
+  useEffect(() => {
+    currentRef.current = current;
+    if (placed.current && !browsing.current && current >= 0) scrollToCurrent(true);
   }, [current]);
+
+  useEffect(
+    () => () => {
+      if (resyncTimer.current) clearTimeout(resyncTimer.current);
+    },
+    [],
+  );
+
+  const startBrowsing = () => {
+    browsing.current = true;
+    if (resyncTimer.current) clearTimeout(resyncTimer.current);
+    resyncTimer.current = null;
+  };
+
+  // Half a second after the finger lifts, the list goes back to the line being sung.
+  const stopBrowsing = () => {
+    if (resyncTimer.current) clearTimeout(resyncTimer.current);
+    resyncTimer.current = setTimeout(() => {
+      resyncTimer.current = null;
+      browsing.current = false;
+      scrollToCurrent(true);
+    }, 500);
+  };
 
   if (loading) {
     return (
@@ -239,7 +279,22 @@ function LyricsPanel({ item }: { item: QueueItem }) {
       data={lines}
       keyExtractor={(line, i) => `${i}:${line.time}`}
       contentContainerStyle={{ paddingVertical: 80 }}
-      onScrollToIndexFailed={() => undefined}
+      // Every line rendered at once, so the list can open on the current one instead of waiting for the next.
+      initialNumToRender={lines.length}
+      windowSize={41}
+      onContentSizeChange={() => {
+        if (placed.current || browsing.current) return;
+        placed.current = true;
+        scrollToCurrent(false);
+      }}
+      onScrollToIndexFailed={(info) => {
+        listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+        setTimeout(() => {
+          if (!browsing.current) scrollToCurrent(false);
+        }, 60);
+      }}
+      onScrollBeginDrag={startBrowsing}
+      onScrollEndDrag={stopBrowsing}
       showsVerticalScrollIndicator={false}
       renderItem={({ item: line, index }) => (
         <Pressable onPress={() => usePlayer.getState().seek(line.time)}>

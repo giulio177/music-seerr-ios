@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
@@ -9,6 +9,7 @@ import { Backdrop, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addToPlaylist, createPlaylist, usePlaylistPicker } from '@/lib/playlistPicker';
+import { usePlaylists } from '@/lib/playlists';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
 import type { Playlist } from '@/lib/types';
 import { useApi } from '@/lib/useApi';
@@ -21,6 +22,25 @@ export default function AddToPlaylist() {
   const target = usePlaylistPicker((s) => s.target);
   const playlists = useApi<Playlist[]>('/api/jellyfin/playlists');
   const [busy, setBusy] = useState<string | null>(null);
+  const saved = usePlaylists((s) => s.playlists);
+  // Song IDs of the target in the library (a request counts once its song is there).
+  const songIds = useMemo(
+    () =>
+      target?.kind === 'tracks' ? target.tracks.map((tr) => tr.id) : target?.kind === 'job' && target.job.track.jellyfin_id ? [target.job.track.jellyfin_id] : [],
+    [target],
+  );
+  /** Playlists that already hold every song of the target, from the saved playlist contents. */
+  const holding = useMemo(() => {
+    const set = new Set<string>();
+    if (!songIds.length) return set;
+    for (const p of saved) if (songIds.every((id) => p.track_ids.includes(id))) set.add(p.id);
+    return set;
+  }, [saved, songIds]);
+
+  // Saved contents can be a session old: read them again so the marks are current.
+  useEffect(() => {
+    usePlaylists.getState().refresh();
+  }, []);
   // Regular accounts may change only their own playlists; administrators may change any they see.
   const own = (playlists.data ?? []).filter((p) => user?.is_admin || !p.owner_user_id || p.owner_user_id === user?.id);
   const subtitle =
@@ -51,8 +71,17 @@ export default function AddToPlaylist() {
     );
   };
 
-  const choose = async (playlist: Playlist) => {
+  const choose = (playlist: Playlist) => {
     if (!target || busy) return;
+    if (!holding.has(playlist.id)) return add(playlist);
+    Alert.alert(t('playlistPicker.alreadyTitle'), t('playlistPicker.alreadyBody', { name: playlist.name, count: songIds.length }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('playlistPicker.addAgain'), onPress: () => add(playlist) },
+    ]);
+  };
+
+  const add = async (playlist: Playlist) => {
+    if (!target) return;
     setBusy(playlist.id);
     try {
       done(await addToPlaylist(target, playlist), playlist.name);
@@ -129,9 +158,16 @@ export default function AddToPlaylist() {
                 <Text style={styles.name} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <Text style={styles.count}>{t('common.tracks', { count: item.track_count ?? 0 })}</Text>
+                <Text style={styles.count}>
+                  {holding.has(item.id) ? `${t('playlistPicker.alreadyIn')} · ` : ''}
+                  {t('common.tracks', { count: item.track_count ?? 0 })}
+                </Text>
               </View>
-              {busy === item.id ? <ActivityIndicator color={colors.textSecondary} /> : null}
+              {busy === item.id ? (
+                <ActivityIndicator color={colors.textSecondary} />
+              ) : holding.has(item.id) ? (
+                <Symbol name="checkmark.circle.fill" fallback="checkmark-circle" size={24} color={accent} />
+              ) : null}
             </Pressable>
           )}
         />

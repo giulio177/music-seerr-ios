@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Cover } from '@/components/Cover';
@@ -36,7 +36,7 @@ const PATHS: Record<Kind, (id: string) => string> = {
  * - Artists show their library albums and the releases the library lacks, then every song.
  * - `downloaded` (from the Downloads tab) and offline: only the downloaded songs (playlists in their order, from `usePlaylists`).
  */
-export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: string; downloaded?: boolean }) {
+export function CollectionScreen({ kind, id, downloaded, highlight }: { kind: Kind; id: string; downloaded?: boolean; /** Song to scroll to and highlight (opened from search or requests). */ highlight?: string }) {
   const { t } = useTranslation();
   const unreachable = useAuth((s) => s.unreachable);
   const localOnly = !!downloaded;
@@ -129,6 +129,28 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
     keyed.sort((a, b) => a.disc - b.disc || a.number - b.number || a.order - b.order);
     return keyed.map((k) => k.row);
   }, [tracks, missing, kind, albums.length, releases.length]);
+
+  // A song opened from search or the request history: scroll to it and highlight it for a moment. The album's missing
+  // songs are merged in when the catalog answers, which can move it, so it is followed until then.
+  const listRef = useRef<FlatList<Row>>(null);
+  const [flash, setFlash] = useState<string | null>(highlight ?? null);
+  const scrolledTo = useRef(-1);
+  const highlightDone = useRef(false);
+  const highlightIndex = highlight ? rows.findIndex((row) => row.type === 'track' && row.track.id === highlight) : -1;
+  const settled = !catalog.loading;
+  useEffect(() => {
+    if (highlightDone.current || highlightIndex < 0) return;
+    if (settled) highlightDone.current = true;
+    if (highlightIndex === scrolledTo.current) return;
+    scrolledTo.current = highlightIndex;
+    // Not cleared on the next run: `settled` can change before it fires with the song still at this index.
+    setTimeout(() => listRef.current?.scrollToIndex({ index: highlightIndex, viewPosition: 0.4, animated: true }), 300);
+  }, [highlightIndex, settled]);
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), 2500);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   const savedCount = tracks.filter((tr) => savedTracks[tr.id]).length;
   const pending = tracks.filter((tr) => active[tr.id] !== undefined && active[tr.id] !== 'error').length;
@@ -252,7 +274,12 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: info?.name ?? '', headerLargeTitle: false }} />
       <FlatList
+        ref={listRef}
         data={rows}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.4, animated: true }), 80);
+        }}
         keyExtractor={(row, index) => (row.type === 'songsTitle' ? 'songs' : `${row.type}:${row.track.id}:${index}`)}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: 140 }}
@@ -274,7 +301,13 @@ export function CollectionScreen({ kind, id, downloaded }: { kind: Kind; id: str
           ) : row.type === 'missing' ? (
             <MissingRow track={row.track} job={jobs[row.track.id]} onRequest={() => request(row.track)} />
           ) : (
-            <TrackRow track={row.track} showNumber={kind === 'album'} playlistId={editablePlaylist} onPress={() => play(row.index)} />
+            <TrackRow
+              track={row.track}
+              showNumber={kind === 'album'}
+              playlistId={editablePlaylist}
+              highlighted={flash === row.track.id}
+              onPress={() => play(row.index)}
+            />
           )
         }
       />

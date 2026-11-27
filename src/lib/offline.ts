@@ -2,6 +2,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
 import { create } from 'zustand';
 import { absoluteUrl, albumCoverPath, api, authHeaders } from './api';
+import { rememberGain } from './loudness';
 import type { LibraryTrack, Lyrics } from './types';
 
 /**
@@ -387,6 +388,7 @@ export const useOffline = create<OfflineState>((set, get) => ({
       if (saved[track.id] || (state !== undefined && state !== 'error')) continue;
       next[track.id] = 'queued';
       nextPending[track.id] = track;
+      rememberGain(track);
       queue.push(track);
     }
     set({ active: next, pending: nextPending });

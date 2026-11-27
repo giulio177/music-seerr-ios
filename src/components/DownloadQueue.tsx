@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isRunning, useDownloadQueue } from '@/lib/downloadQueue';
+import { openInLibrary } from '@/lib/locate';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
 import { openAddToPlaylist } from '@/lib/playlistPicker';
 import type { DownloadJob } from '@/lib/types';
@@ -97,6 +98,8 @@ function JobRow({ job }: { job: DownloadJob }) {
   return (
     <ContextMenu items={items} previewTitle={job.track.title} previewSubtitle={job.track.artist} previewImages={job.track.cover_url ? [job.track.cover_url] : []}>
     <Pressable
+      // A finished request opens its song in the library.
+      onPress={done ? () => openInLibrary({ jellyfinId: job.track.jellyfin_id, title: job.track.title, artist: job.track.artist }) : undefined}
       onLongPress={hasNativeContextMenu || !items.length ? undefined : () => showActionSheet(items, t('common.cancel'), job.track.title, job.track.artist)}
       style={styles.row}
     >

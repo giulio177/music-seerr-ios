@@ -23,7 +23,7 @@ iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-host
 - **Home feed** with recently played tracks, playlists, and Picked for you recommendations.
 - **Library browsing** for playlists, artists, albums, songs, and Recently Added albums.
 - **Search and request**: preview 30-second catalog clips, request missing songs or albums, monitor the live server download queue (cancel, retry, dismiss, or add a request to a playlist), and browse your request history.
-- **Playlist editing**: create playlists, add songs from any song menu, and remove songs from playlists you own.
+- **Playlist editing**: create playlists, add songs from any song menu (playlists that already hold the song are marked), and remove songs from playlists you own.
 
 ### Listen and offline
 
@@ -32,6 +32,7 @@ iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-host
 - **Files app access**: downloads are stored as `<Artist>/<Album>/<NN> <Title>` in the app's Documents folder, visible in the iOS Files app.
 - **Offline-first launch**: opens directly into your library, falls back to downloaded songs when the server is unreachable, and supports a downloads-only mode without signing in.
 - **Full playback controls**: background audio, lock screen and Control Center controls, editable queue, shuffle, repeat (all or one), and crossfade (1 to 12 seconds).
+- **Volume stabilizer**: plays every song at a similar loudness using Jellyfin's audio normalization data (Settings > Playback). Needs Sonalis server 0.3.0 or later.
 - **Synced lyrics**: follow along with instrumental break indicators; lyrics are saved offline with every download.
 - **Lyrics editor (beta)**: retime synced lyrics from the player, line by line or for the whole song; turn it on in Settings > Beta (needs lyrics permission on the server).
 - **Mini player gestures**: swipe left or right on the mini player to skip tracks.

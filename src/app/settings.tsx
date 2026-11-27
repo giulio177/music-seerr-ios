@@ -12,6 +12,7 @@ import { AccentButton, Backdrop, Glass } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useBeta } from '@/lib/beta';
+import { useLoudness } from '@/lib/loudness';
 import { formatBytes } from '@/lib/format';
 import { savedLanguage, setLanguage, type LanguageChoice } from '@/lib/language';
 import { useOffline } from '@/lib/offline';
@@ -65,6 +66,7 @@ export default function Settings() {
 
           <ServerSection />
           <PreferencesSection />
+          <PlaybackSection />
           {user?.is_admin && !unreachable ? <AdminSections /> : null}
           <DownloadsSection />
           <SigningSection />
@@ -479,6 +481,19 @@ function PermissionsSection({ value, onSaved }: { value: boolean; onSaved: () =>
     <Section title={t('settings.permissions')} footer={t('settings.lyricsUsersFooter')}>
       <Row label={t('settings.lyricsUsers')} last>
         <Switch value={pending ?? value} trackColor={{ true: accent }} onValueChange={set} />
+      </Row>
+    </Section>
+  );
+}
+
+function PlaybackSection() {
+  const { t } = useTranslation();
+  const { accent } = useAccent();
+  const enabled = useLoudness((s) => s.enabled);
+  return (
+    <Section title={t('settings.playback')} footer={t('settings.normalizeFooter')}>
+      <Row label={t('settings.normalize')} last>
+        <Switch value={enabled} trackColor={{ true: accent }} onValueChange={(on) => useLoudness.getState().setEnabled(on)} />
       </Row>
     </Section>
   );

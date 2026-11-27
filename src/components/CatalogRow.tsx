@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { openInLibrary } from '@/lib/locate';
 import { usePlayer, useCurrentItem } from '@/lib/player';
 import { colors, useAccent, withAlpha } from '@/lib/theme';
 import type { CatalogTrack, DownloadJob } from '@/lib/types';
@@ -34,10 +35,17 @@ export function CatalogRow({ track, job, onRequest }: { track: CatalogTrack; job
 
   let right: React.ReactNode;
   if (inLibrary) {
+    // Opens the song in its library album.
     right = (
-      <View style={[styles.badge, { backgroundColor: withAlpha(accent, 0.18) }]}>
+      <Pressable
+        onPress={() => openInLibrary({ jellyfinId: track.jellyfin_id, title: track.title, artist: track.artist })}
+        hitSlop={8}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.badge, styles.badgeLink, { backgroundColor: withAlpha(accent, pressed ? 0.3 : 0.18) }]}
+      >
         <Text style={[styles.badgeText, { color: accent }]}>{t('search.inLibraryBadge')}</Text>
-      </View>
+        <Ionicons name="chevron-forward" size={12} color={accent} />
+      </Pressable>
     );
   } else if (job) {
     const failed = job.status === 'failed' || job.status === 'interrupted';
@@ -86,6 +94,7 @@ const styles = StyleSheet.create({
   sub: { color: colors.textSecondary, fontSize: 14, marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   badgeText: { fontSize: 12, fontWeight: '700' },
+  badgeLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   request: { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   requestText: { fontSize: 13, fontWeight: '700' },
   previewDot: {
