@@ -7,7 +7,7 @@ import { DownloadQueue } from '@/components/DownloadQueue';
 import { RequestTargetPicker } from '@/components/RequestTarget';
 import { NavList } from '@/components/Shelf';
 import { TrackRow } from '@/components/TrackRow';
-import { EmptyState, ErrorState, OfflineState } from '@/components/ui';
+import { AccentButton, EmptyState, ErrorState, OfflineState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useDownloadQueue } from '@/lib/downloadQueue';
@@ -16,6 +16,7 @@ import { useRequests } from '@/lib/requests';
 import { useRequestTarget } from '@/lib/requestTarget';
 import { colors } from '@/lib/theme';
 import type { CatalogTrack, LibraryTrack } from '@/lib/types';
+import { isYouTubeLink, openYouTubeLink } from '@/lib/youtube';
 
 type Results = { library: LibraryTrack[]; catalog: CatalogTrack[] };
 
@@ -77,7 +78,12 @@ export default function Search() {
           title: t('tabs.search'),
           headerSearchBarOptions: unreachable ? undefined : {
             placeholder: t('search.placeholder'),
-            onChangeText: (e) => setQuery(e.nativeEvent.text),
+            onChangeText: (e) => {
+              const text = e.nativeEvent.text;
+              // A pasted YouTube link is not a search: open it in the link screen instead.
+              if (!isGuest && isYouTubeLink(text)) openYouTubeLink(text);
+              else setQuery(text);
+            },
             hideWhenScrolling: false,
             autoCapitalize: 'none',
           },
@@ -112,6 +118,13 @@ export default function Search() {
                         fallback: 'time-outline',
                         onPress: () => router.push('/requests'),
                       },
+                      {
+                        key: 'youtube',
+                        title: t('youtube.title'),
+                        symbol: 'link',
+                        fallback: 'link-outline',
+                        onPress: () => openYouTubeLink(),
+                      },
                     ]}
                   />
                   <DownloadQueue />
@@ -123,7 +136,12 @@ export default function Search() {
             loading ? undefined : error ? (
               <ErrorState error={error} onRetry={() => run(query)} />
             ) : results || !queueShown ? (
-              <EmptyState icon="search" body={results ? t('search.noResults') : t('search.hint')} />
+              <EmptyState
+                icon="search"
+                body={results ? t('search.noResults') : t('search.hint')}
+                // Not in the catalog: the song can still come from a YouTube link.
+                action={results && !isGuest ? <AccentButton label={t('youtube.title')} icon="link-outline" variant="glass" onPress={() => openYouTubeLink()} /> : undefined}
+              />
             ) : undefined
           }
           renderItem={({ item, section, index }) =>

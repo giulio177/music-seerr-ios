@@ -386,5 +386,20 @@
     "title": "Requested songs go to",
     "label": "Requests go to",
     "libraryOnly": "Library only"
+  },
+  "youtube": {
+    "title": "From a YouTube link",
+    "hint": "Paste a YouTube or YouTube Music link for a song the search does not find. Sonalis downloads exactly that video.",
+    "find": "Read link",
+    "notLink": "This is not a link to a YouTube video.",
+    "unavailable": "The video is unavailable or private.",
+    "serverTooOld": "The server does not support YouTube links yet. Update Sonalis on the server.",
+    "failed": "Could not read the link.",
+    "alreadyInLibrary": "Already in your library",
+    "checkFields": "Check the title and artist taken from the video: the file and its tags use them.",
+    "songTitle": "Title",
+    "artist": "Artist",
+    "album": "Album",
+    "albumPlaceholder": "Optional: the title is used"
   }
 }

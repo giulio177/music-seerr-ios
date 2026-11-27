@@ -22,7 +22,7 @@ iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-host
 - **Sign in** with your Jellyfin account (or as a guest) on your Sonalis server.
 - **Home feed** with recently played tracks, playlists, and Picked for you recommendations.
 - **Library browsing** for playlists, artists, albums, songs, and Recently Added albums.
-- **Search and request**: preview 30-second catalog clips, request missing songs or albums (optionally straight into one of your playlists), monitor the live server download queue (cancel, retry, dismiss, or add a request to a playlist), and browse your request history.
+- **Search and request**: preview 30-second catalog clips, request missing songs or albums (optionally straight into one of your playlists), monitor the live server download queue (cancel, retry, dismiss, or add a request to a playlist), and browse your request history. Songs the catalog lacks can be requested from a YouTube or YouTube Music link (paste it into Search; needs Sonalis server 0.3.1 or later).
 - **Playlist editing**: create playlists, add songs from any song menu (playlists that already hold the song are marked), and remove songs from playlists you own.
 
 ### Listen and offline

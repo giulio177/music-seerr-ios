@@ -386,5 +386,20 @@
     "title": "Dove finiscono i brani richiesti",
     "label": "Richieste in",
     "libraryOnly": "Solo libreria"
+  },
+  "youtube": {
+    "title": "Da un link YouTube",
+    "hint": "Incolla un link di YouTube o YouTube Music per un brano che la ricerca non trova. Sonalis scarica esattamente quel video.",
+    "find": "Leggi link",
+    "notLink": "Questo non è un link a un video di YouTube.",
+    "unavailable": "Il video non è disponibile o è privato.",
+    "serverTooOld": "Il server non supporta ancora i link YouTube. Aggiorna Sonalis sul server.",
+    "failed": "Impossibile leggere il link.",
+    "alreadyInLibrary": "Già nella tua libreria",
+    "checkFields": "Controlla titolo e artista presi dal video: il file e i suoi tag li usano.",
+    "songTitle": "Titolo",
+    "artist": "Artista",
+    "album": "Album",
+    "albumPlaceholder": "Facoltativo: si usa il titolo"
   }
 }

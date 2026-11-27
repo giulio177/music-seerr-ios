@@ -118,6 +118,10 @@ export default function RootLayout() {
               options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }}
             />
             <Stack.Screen
+              name="youtube-link"
+              options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }}
+            />
+            <Stack.Screen
               name="lyrics-editor"
               options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }}
             />
