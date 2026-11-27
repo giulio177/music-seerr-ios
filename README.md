@@ -109,7 +109,8 @@ Requires iOS 26 or later.
 | Download Current Song, Download Album, Download Playlist | Saves songs to the iPhone for offline listening |
 | What's Playing | Reports the current song, playback state, and active device |
 
-- If the app is closed, running an action opens it first.
+- Actions run in the background, even when the app is closed or the iPhone is locked (for example from a Bluetooth or CarPlay automation).
+- In automations, keep **Open When Run** off: iOS cannot open an app while the iPhone is locked.
 - Playlists and albums are indexed in Spotlight; tapping a result opens the page and starts playback.
 - Any action can be assigned to the Action button or used inside Shortcuts automations.
 

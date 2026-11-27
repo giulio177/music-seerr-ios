@@ -24,6 +24,7 @@
     "plugins": [
       "expo-router",
       "@bacons/apple-targets",
+      "./plugins/withHeadlessScene",
       [
         "expo-audio",
         {

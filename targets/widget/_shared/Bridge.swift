@@ -18,13 +18,15 @@ struct ShortcutError: Error, CustomLocalizedStringResourceConvertible {
 enum Bridge {
   /// Runs an action in the app's JavaScript (`src/lib/shortcuts.ts`) and returns its JSON object.
   ///
-  /// React Native starts with the scene, so when the app is not running the intent asks to continue in the
-  /// foreground first (`supportedModes` of the calling intent must include `.foreground(.dynamic)`).
+  /// React Native starts with the scene, so when the app was launched in the background for this intent it is
+  /// started without a window (`HeadlessReact`), which also works on a locked iPhone. Only if that is impossible
+  /// does the intent ask to continue in the foreground (`supportedModes` must include `.foreground(.dynamic)`).
   static func call(_ action: String, _ args: [String: Any] = [:], from intent: some AppIntent, foreground: Bool = true) async throws -> [String: Any] {
 #if canImport(SystemAudio)
     if foreground && !IntentBridge.shared.isReady {
+      let started = await MainActor.run { HeadlessReact.startIfNeeded() }
       let active = await MainActor.run { UIApplication.shared.applicationState == .active }
-      if !active { try await intent.continueInForeground(nil, alwaysConfirm: false) }
+      if !started && !active { try await intent.continueInForeground(nil, alwaysConfirm: false) }
     }
     let data: Data
     do {
