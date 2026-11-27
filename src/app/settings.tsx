@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import type { TFunction } from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Cover } from '@/components/Cover';
 import { Menu, type MenuItem } from '@/components/Menu';
@@ -33,6 +33,9 @@ type ServerSettings = {
   lyrics_edit_users?: boolean;
   jellyfin_music_paths?: string[];
 };
+
+/** Every setting explained (why it exists, what it does), in the server repository. */
+const SETTINGS_GUIDE_URL = 'https://github.com/giulio177/sonalis/blob/main/docs/SETTINGS.md';
 
 /**
  * Settings, shared with the web app: every change is saved on the server (accent color, crossfade, language,
@@ -72,6 +75,9 @@ export default function Settings() {
           <SigningSection />
           <UpdatesSection />
           <BetaSection />
+          <Section title={t('settings.help')}>
+            <Row label={t('settings.guide')} onPress={() => Linking.openURL(SETTINGS_GUIDE_URL).catch(() => undefined)} last />
+          </Section>
 
           <AccentButton
             label={t('settings.signOut')}

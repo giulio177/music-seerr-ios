@@ -223,7 +223,9 @@
     "betaLyricsFooter": "Adds Edit lyrics to the player menu. Still in testing: check the result in the player after saving.",
     "playback": "Playback",
     "normalize": "Stabilize volume",
-    "normalizeFooter": "Plays every song at a similar loudness, measured by Jellyfin, so you do not have to change the volume between songs. Loud songs are turned down to match quieter ones, so raise the iPhone volume once after turning this on. Applies to this iPhone."
+    "normalizeFooter": "Plays every song at a similar loudness, measured by Jellyfin, so you do not have to change the volume between songs. Loud songs are turned down to match quieter ones, so raise the iPhone volume once after turning this on. Applies to this iPhone.",
+    "help": "Help",
+    "guide": "Settings guide"
   },
   "errors": {
     "offlineTitle": "Offline mode",

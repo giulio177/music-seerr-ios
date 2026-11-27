@@ -223,7 +223,9 @@
     "betaLyricsFooter": "Aggiunge Modifica lyrics al menu del player. Ancora in prova: controlla il risultato nel player dopo aver salvato.",
     "playback": "Riproduzione",
     "normalize": "Stabilizza volume",
-    "normalizeFooter": "Riproduce ogni brano a un volume simile, misurato da Jellyfin, così non devi regolare il volume tra un brano e l'altro. I brani più forti vengono abbassati al livello di quelli più bassi: dopo averlo attivato alza una volta il volume dell'iPhone. Vale per questo iPhone."
+    "normalizeFooter": "Riproduce ogni brano a un volume simile, misurato da Jellyfin, così non devi regolare il volume tra un brano e l'altro. I brani più forti vengono abbassati al livello di quelli più bassi: dopo averlo attivato alza una volta il volume dell'iPhone. Vale per questo iPhone.",
+    "help": "Aiuto",
+    "guide": "Guida alle impostazioni"
   },
   "errors": {
     "offlineTitle": "Modalità offline",

@@ -50,6 +50,8 @@ iPhone client for [Sonalis](https://github.com/giulio177/sonalis), the self-host
 - **Signature countdown**: **Settings > Signature** shows the days left before your 7-day sideloading signature expires.
 - **Languages**: English and Italian.
 
+Every setting of the app and the web app, with what it does and why it exists, is explained in the [settings guide](https://github.com/giulio177/sonalis/blob/main/docs/SETTINGS.md).
+
 ## Requirements
 
 | Requirement | Details |
