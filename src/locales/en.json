@@ -114,7 +114,8 @@
     },
     "requestFailed": "The request failed.",
     "notFoundInLibrary": "This song is not in the library yet.",
-    "openFailed": "Could not open the song."
+    "openFailed": "Could not open the song.",
+    "requestedTo": "Requested. It joins {{name}} when downloaded."
   },
   "offline": {
     "title": "Downloads",
@@ -225,7 +226,9 @@
     "normalize": "Stabilize volume",
     "normalizeFooter": "Plays every song at a similar loudness, measured by Jellyfin, so you do not have to change the volume between songs. Loud songs are turned down to match quieter ones, so raise the iPhone volume once after turning this on. Applies to this iPhone.",
     "help": "Help",
-    "guide": "Settings guide"
+    "guide": "Settings guide",
+    "build": "build {{number}}",
+    "developmentBuild": "development"
   },
   "errors": {
     "offlineTitle": "Offline mode",
@@ -378,5 +381,10 @@
     "discardBody": "Your changes to these lyrics have not been saved.",
     "discard": "Discard",
     "keepEditing": "Keep editing"
+  },
+  "requestTarget": {
+    "title": "Requested songs go to",
+    "label": "Requests go to",
+    "libraryOnly": "Library only"
   }
 }

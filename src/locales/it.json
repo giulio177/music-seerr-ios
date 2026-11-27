@@ -114,7 +114,8 @@
     },
     "requestFailed": "La richiesta non è riuscita.",
     "notFoundInLibrary": "Questo brano non è ancora in libreria.",
-    "openFailed": "Impossibile aprire il brano."
+    "openFailed": "Impossibile aprire il brano.",
+    "requestedTo": "Richiesto. Finirà in {{name}} quando è scaricato."
   },
   "offline": {
     "title": "Scaricati",
@@ -225,7 +226,9 @@
     "normalize": "Stabilizza volume",
     "normalizeFooter": "Riproduce ogni brano a un volume simile, misurato da Jellyfin, così non devi regolare il volume tra un brano e l'altro. I brani più forti vengono abbassati al livello di quelli più bassi: dopo averlo attivato alza una volta il volume dell'iPhone. Vale per questo iPhone.",
     "help": "Aiuto",
-    "guide": "Guida alle impostazioni"
+    "guide": "Guida alle impostazioni",
+    "build": "build {{number}}",
+    "developmentBuild": "sviluppo"
   },
   "errors": {
     "offlineTitle": "Modalità offline",
@@ -378,5 +381,10 @@
     "discardBody": "Le modifiche a queste lyrics non sono state salvate.",
     "discard": "Annulla modifiche",
     "keepEditing": "Continua a modificare"
+  },
+  "requestTarget": {
+    "title": "Dove finiscono i brani richiesti",
+    "label": "Richieste in",
+    "libraryOnly": "Solo libreria"
   }
 }

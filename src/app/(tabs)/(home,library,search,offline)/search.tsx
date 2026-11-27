@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { CatalogRow } from '@/components/CatalogRow';
 import { DownloadQueue } from '@/components/DownloadQueue';
+import { RequestTargetPicker } from '@/components/RequestTarget';
 import { NavList } from '@/components/Shelf';
 import { TrackRow } from '@/components/TrackRow';
 import { EmptyState, ErrorState, OfflineState } from '@/components/ui';
@@ -12,6 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { useDownloadQueue } from '@/lib/downloadQueue';
 import { usePlayer } from '@/lib/player';
 import { useRequests } from '@/lib/requests';
+import { useRequestTarget } from '@/lib/requestTarget';
 import { colors } from '@/lib/theme';
 import type { CatalogTrack, LibraryTrack } from '@/lib/types';
 
@@ -93,25 +95,29 @@ export default function Search() {
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
           ListHeaderComponent={
-            loading ? (
-              <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} />
-            ) : !results && !isGuest ? (
-              // Before a search: this account's download requests and their progress, and the full history.
-              <>
-                <NavList
-                  items={[
-                    {
-                      key: 'requests',
-                      title: t('requests.title'),
-                      symbol: 'clock.arrow.circlepath',
-                      fallback: 'time-outline',
-                      onPress: () => router.push('/requests'),
-                    },
-                  ]}
-                />
-                <DownloadQueue />
-              </>
-            ) : undefined
+            <>
+              {/* Where requested songs go: the library only, or a playlist they join once downloaded. */}
+              {isGuest ? null : <RequestTargetPicker />}
+              {loading ? (
+                <ActivityIndicator style={{ marginTop: 16 }} color={colors.textSecondary} />
+              ) : !results && !isGuest ? (
+                // Before a search: this account's download requests and their progress, and the full history.
+                <>
+                  <NavList
+                    items={[
+                      {
+                        key: 'requests',
+                        title: t('requests.title'),
+                        symbol: 'clock.arrow.circlepath',
+                        fallback: 'time-outline',
+                        onPress: () => router.push('/requests'),
+                      },
+                    ]}
+                  />
+                  <DownloadQueue />
+                </>
+              ) : null}
+            </>
           }
           ListEmptyComponent={
             loading ? undefined : error ? (
@@ -127,7 +133,7 @@ export default function Search() {
                 onPress={() => usePlayer.getState().playTracks(section.data as LibraryTrack[], index)}
               />
             ) : (
-              <CatalogRow track={item as CatalogTrack} job={jobs[item.id]} onRequest={() => request(item as CatalogTrack)} />
+              <CatalogRow track={item as CatalogTrack} job={jobs[item.id]} onRequest={() => request(item as CatalogTrack, useRequestTarget.getState().target)} />
             )
           }
         />

@@ -89,13 +89,25 @@ export default function Settings() {
             }}
             style={{ marginTop: 24 }}
           />
-          <Text style={styles.version}>
-            {t('settings.version')} {Constants.expoConfig?.version ?? '?'}
-          </Text>
+          <BuildInfo />
         </ScrollView>
       </SafeAreaView>
     </View>
   );
+}
+
+/** Version, build number, commit, and variant of this build (set by the release workflow). */
+function BuildInfo() {
+  const { t } = useTranslation();
+  const config = Constants.expoConfig;
+  const extra = (config?.extra ?? {}) as { commit?: string | null; variant?: string | null };
+  const parts = [
+    `${t('settings.version')} ${config?.version ?? '?'}`,
+    config?.ios?.buildNumber ? t('settings.build', { number: config.ios.buildNumber }) : null,
+    extra.commit ?? null,
+    extra.variant === 'development' ? t('settings.developmentBuild') : null,
+  ].filter(Boolean);
+  return <Text style={styles.version}>{parts.join(' · ')}</Text>;
 }
 
 /* ---------- Building blocks ---------- */

@@ -113,7 +113,9 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="add-to-playlist"
-              options={{ presentation: 'formSheet', sheetAllowedDetents: [0.6, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.bg } }}
+              // A full-height modal: with sheet detents, scrolling the list while the sheet resized left it drawn
+              // over the title and stuck until reopened.
+              options={{ presentation: 'modal', contentStyle: { backgroundColor: colors.bg } }}
             />
             <Stack.Screen
               name="lyrics-editor"

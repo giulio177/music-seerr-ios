@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from '@/components/Toast';
 import { api, ApiError } from './api';
 import { useDownloadQueue } from './downloadQueue';
+import type { RequestTarget } from './requestTarget';
 import type { CatalogTrack, DownloadJob } from './types';
 
 const TERMINAL = new Set(['completed', 'failed', 'interrupted']);
@@ -31,16 +32,20 @@ export function useRequests() {
     return () => clearInterval(timer);
   }, [pendingKey]);
 
-  const send = async (track: CatalogTrack) => {
-    const job = await api<DownloadJob>('/api/download', { method: 'POST', body: { track } });
+  const send = async (track: CatalogTrack, playlist?: RequestTarget | null) => {
+    const job = await api<DownloadJob>('/api/download', {
+      method: 'POST',
+      body: playlist ? { track, playlist_id: playlist.id, playlist_name: playlist.name } : { track },
+    });
     setJobs((prev) => ({ ...prev, [track.id]: job }));
     useDownloadQueue.getState().refresh();
   };
 
-  const request = async (track: CatalogTrack) => {
+  /** Requests one song; with `playlist` the server adds it there when its download finishes. */
+  const request = async (track: CatalogTrack, playlist?: RequestTarget | null) => {
     try {
-      await send(track);
-      toast(t('search.requested'));
+      await send(track, playlist);
+      toast(playlist ? t('search.requestedTo', { name: playlist.name }) : t('search.requested'));
     } catch (e) {
       toast(e instanceof ApiError && e.detail ? e.detail : t('search.requestFailed'));
     }
